@@ -13,10 +13,12 @@ import { ArrowLeft, Bell, History, Camera as CameraIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { useAlignerAnalysis } from '@/hooks/useAlignerAnalysis';
+import { toast } from 'sonner';
 
 export default function PatientDashboard() {
   const navigate = useNavigate();
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { analyzePhoto, isAnalyzing } = useAlignerAnalysis();
   const [latestAnalysis, setLatestAnalysis] = useState<PhotoAnalysis | null>(
     currentPatient.photos[0]?.analysisResult || null
   );
@@ -25,27 +27,22 @@ export default function PatientDashboard() {
   const progress = (currentPatient.currentAligner / currentPatient.totalAligners) * 100;
 
   const handlePhotosComplete = async (photos: { angle: PhotoAngle; url: string }[]) => {
-    setIsAnalyzing(true);
     console.log('Photos captured:', photos.length);
     
-    // Simulate AI analysis (in production, this would call Azure Cognitive Services)
-    await new Promise(resolve => setTimeout(resolve, 2500));
+    // Analyze the front photo with AI (Gemini)
+    const frontPhoto = photos.find(p => p.angle === 'front') || photos[0];
+    if (!frontPhoto) {
+      toast.error('Aucune photo à analyser');
+      return;
+    }
+
+    toast.info('Analyse IA en cours...');
+    const analysis = await analyzePhoto(frontPhoto.url);
     
-    const mockAnalysis: PhotoAnalysis = {
-      status: 'analyzed',
-      attachmentStatus: Math.random() > 0.7 ? 'missing' : 'ok',
-      insertionQuality: Math.random() > 0.8 ? 'poor' : 'good',
-      gingivalHealth: Math.random() > 0.9 ? 'mild_inflammation' : 'healthy',
-      overallScore: Math.floor(70 + Math.random() * 30),
-      recommendations: [
-        'Continuez à porter vos gouttières 22h/jour',
-        'Brossez-vous les dents après chaque repas'
-      ],
-      analyzedAt: new Date()
-    };
-    
-    setLatestAnalysis(mockAnalysis);
-    setIsAnalyzing(false);
+    if (analysis) {
+      setLatestAnalysis(analysis);
+      toast.success('Analyse terminée !');
+    }
   };
 
   return (

@@ -1,1 +1,7 @@
 project_id = "vtttdagspiskmjawdzjx"
+
+[functions.create-admin]
+verify_jwt = false
+
+[functions.analyze-aligner-photo]
+verify_jwt = false
