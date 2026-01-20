@@ -1,11 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Stethoscope, User, ArrowRight, Shield, Camera, Bell, Sparkles } from 'lucide-react';
+import { Stethoscope, User, ArrowRight, Shield, Camera, Bell, Sparkles, LogIn, Settings } from 'lucide-react';
 import heroImage from '@/assets/hero-aligner.jpg';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Index() {
   const navigate = useNavigate();
+  const { user, isAdmin, isPractitioner, signOut } = useAuth();
 
   const features = [
     {
@@ -49,6 +51,33 @@ export default function Index() {
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-info/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
         
         <div className="relative container max-w-6xl py-16 px-4">
+          {/* Top bar with auth */}
+          <div className="flex justify-end mb-6 gap-2">
+            {user ? (
+              <>
+                {isAdmin && (
+                  <Button variant="outline" size="sm" onClick={() => navigate('/admin')}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Administration
+                  </Button>
+                )}
+                {isPractitioner && (
+                  <Button variant="outline" size="sm" onClick={() => navigate('/practitioner-new')}>
+                    Mes patients
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={() => signOut()}>
+                  Déconnexion
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
+                <LogIn className="h-4 w-4 mr-2" />
+                Connexion
+              </Button>
+            )}
+          </div>
+
           {/* Logo */}
           <div className="flex items-center justify-center gap-3 mb-12">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl gradient-primary shadow-lg shadow-primary/25">

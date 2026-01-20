@@ -8,13 +8,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 interface HeaderProps {
-  userType: 'patient' | 'practitioner';
+  userType?: 'patient' | 'practitioner';
+  userRole?: 'admin' | 'practitioner' | 'patient';
   userName: string;
   alertCount?: number;
   onMenuClick?: () => void;
+  onLogout?: () => void;
 }
 
-export function Header({ userType, userName, alertCount = 0, onMenuClick }: HeaderProps) {
+export function Header({ userType, userRole, userName, alertCount = 0, onMenuClick, onLogout }: HeaderProps) {
+  const displayRole = userRole || userType || 'patient';
+  const roleLabel = displayRole === 'admin' ? 'Administration' : displayRole === 'practitioner' ? 'Espace Praticien' : 'Espace Patient';
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between px-4">
@@ -28,8 +32,8 @@ export function Header({ userType, userName, alertCount = 0, onMenuClick }: Head
             </div>
             <div className="hidden sm:block">
               <h1 className="text-lg font-semibold text-gradient">AlignTrack</h1>
-              <p className="text-xs text-muted-foreground">
-                {userType === 'patient' ? 'Espace Patient' : 'Espace Praticien'}
+            <p className="text-xs text-muted-foreground">
+                {roleLabel}
               </p>
             </div>
           </div>
@@ -56,10 +60,10 @@ export function Header({ userType, userName, alertCount = 0, onMenuClick }: Head
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem className="flex flex-col items-start">
                 <span className="font-medium">{userName}</span>
-                <span className="text-xs text-muted-foreground capitalize">{userType}</span>
+                <span className="text-xs text-muted-foreground capitalize">{displayRole}</span>
               </DropdownMenuItem>
               <DropdownMenuItem>Paramètres</DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive">Déconnexion</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={onLogout}>Déconnexion</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
