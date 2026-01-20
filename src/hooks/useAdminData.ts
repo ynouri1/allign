@@ -160,54 +160,21 @@ export function useCreatePatient() {
       treatment_start?: string;
       total_aligners?: number;
     }) => {
-      // 1. Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
+      // Use edge function to create user without losing admin session
+      const { data: result, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: data.email,
+          password: data.password,
+          full_name: data.full_name,
+          phone: data.phone,
+          role: 'patient',
+          treatment_start: data.treatment_start,
+          total_aligners: data.total_aligners,
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Failed to create user');
-
-      const userId = authData.user.id;
-
-      // 2. Create profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: userId,
-          email: data.email,
-          full_name: data.full_name,
-          phone: data.phone || null,
-        })
-        .select()
-        .single();
-
-      if (profileError) throw profileError;
-
-      // 3. Create patient role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: 'patient',
-        });
-
-      if (roleError) throw roleError;
-
-      // 4. Create patient record
-      const { error: patientError } = await supabase
-        .from('patients')
-        .insert({
-          profile_id: profile.id,
-          treatment_start: data.treatment_start || null,
-          total_aligners: data.total_aligners || 0,
-        });
-
-      if (patientError) throw patientError;
+      if (error) throw error;
+      if (result?.error) throw new Error(result.error);
 
       return { success: true };
     },
@@ -241,54 +208,21 @@ export function useCreatePractitioner() {
       specialty?: string;
       license_number?: string;
     }) => {
-      // 1. Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
+      // Use edge function to create user without losing admin session
+      const { data: result, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: data.email,
+          password: data.password,
+          full_name: data.full_name,
+          phone: data.phone,
+          role: 'practitioner',
+          specialty: data.specialty,
+          license_number: data.license_number,
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Failed to create user');
-
-      const userId = authData.user.id;
-
-      // 2. Create profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: userId,
-          email: data.email,
-          full_name: data.full_name,
-          phone: data.phone || null,
-        })
-        .select()
-        .single();
-
-      if (profileError) throw profileError;
-
-      // 3. Create practitioner role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: 'practitioner',
-        });
-
-      if (roleError) throw roleError;
-
-      // 4. Create practitioner record
-      const { error: practitionerError } = await supabase
-        .from('practitioners')
-        .insert({
-          profile_id: profile.id,
-          specialty: data.specialty || null,
-          license_number: data.license_number || null,
-        });
-
-      if (practitionerError) throw practitionerError;
+      if (error) throw error;
+      if (result?.error) throw new Error(result.error);
 
       return { success: true };
     },
