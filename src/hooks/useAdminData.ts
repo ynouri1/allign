@@ -12,7 +12,7 @@ interface ProfileWithRole {
   role?: 'admin' | 'practitioner' | 'patient';
 }
 
-interface PatientWithProfile {
+export interface PatientWithProfile {
   id: string;
   profile_id: string;
   treatment_start: string | null;
@@ -22,19 +22,21 @@ interface PatientWithProfile {
   notes: string | null;
   profile: {
     id: string;
+    user_id?: string;
     full_name: string;
     email: string;
     phone: string | null;
   };
 }
 
-interface PractitionerWithProfile {
+export interface PractitionerWithProfile {
   id: string;
   profile_id: string;
   specialty: string | null;
   license_number: string | null;
   profile: {
     id: string;
+    user_id?: string;
     full_name: string;
     email: string;
     phone: string | null;
@@ -74,6 +76,7 @@ export function usePatients() {
           notes,
           profile:profiles!patients_profile_id_fkey (
             id,
+            user_id,
             full_name,
             email,
             phone
@@ -100,6 +103,7 @@ export function usePractitioners() {
           license_number,
           profile:profiles!practitioners_profile_id_fkey (
             id,
+            user_id,
             full_name,
             email,
             phone
@@ -364,6 +368,186 @@ export function useRemoveAssignment() {
       toast({
         title: 'Assignation supprimée',
         description: 'L\'assignation a été retirée',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erreur',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useUpdatePatient() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: {
+      patientId: string;
+      profileId: string;
+      full_name: string;
+      phone?: string;
+      treatment_start?: string;
+      total_aligners?: number;
+      current_aligner?: number;
+      next_change_date?: string;
+      notes?: string;
+    }) => {
+      // Update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: data.full_name,
+          phone: data.phone || null,
+        })
+        .eq('id', data.profileId);
+
+      if (profileError) throw profileError;
+
+      // Update patient
+      const { error: patientError } = await supabase
+        .from('patients')
+        .update({
+          treatment_start: data.treatment_start || null,
+          total_aligners: data.total_aligners || 0,
+          current_aligner: data.current_aligner || 1,
+          next_change_date: data.next_change_date || null,
+          notes: data.notes || null,
+        })
+        .eq('id', data.patientId);
+
+      if (patientError) throw patientError;
+
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-patients'] });
+      toast({
+        title: 'Patient modifié',
+        description: 'Les informations ont été mises à jour',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erreur',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useDeletePatient() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (profileId: string) => {
+      // Deleting profile will cascade to patient due to FK constraint
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', profileId);
+
+      if (error) throw error;
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-patients'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-assignments'] });
+      toast({
+        title: 'Patient supprimé',
+        description: 'Le patient a été supprimé avec succès',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erreur',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useUpdatePractitioner() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: {
+      practitionerId: string;
+      profileId: string;
+      full_name: string;
+      phone?: string;
+      specialty?: string;
+      license_number?: string;
+    }) => {
+      // Update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: data.full_name,
+          phone: data.phone || null,
+        })
+        .eq('id', data.profileId);
+
+      if (profileError) throw profileError;
+
+      // Update practitioner
+      const { error: practitionerError } = await supabase
+        .from('practitioners')
+        .update({
+          specialty: data.specialty || null,
+          license_number: data.license_number || null,
+        })
+        .eq('id', data.practitionerId);
+
+      if (practitionerError) throw practitionerError;
+
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-practitioners'] });
+      toast({
+        title: 'Praticien modifié',
+        description: 'Les informations ont été mises à jour',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erreur',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useDeletePractitioner() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (profileId: string) => {
+      // Deleting profile will cascade to practitioner due to FK constraint
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', profileId);
+
+      if (error) throw error;
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-practitioners'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-assignments'] });
+      toast({
+        title: 'Praticien supprimé',
+        description: 'Le praticien a été supprimé avec succès',
       });
     },
     onError: (error: Error) => {
