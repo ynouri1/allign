@@ -14,6 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      patient_photos: {
+        Row: {
+          aligner_number: number
+          analysis_status: string
+          analyzed_at: string | null
+          angle: string
+          attachment_status: string | null
+          brightness_score: number | null
+          created_at: string
+          framing_score: number | null
+          gingival_health: string | null
+          id: string
+          insertion_quality: string | null
+          overall_score: number | null
+          patient_id: string
+          photo_url: string
+          quality_overall: number | null
+          recommendations: string[] | null
+          sharpness_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          aligner_number: number
+          analysis_status?: string
+          analyzed_at?: string | null
+          angle?: string
+          attachment_status?: string | null
+          brightness_score?: number | null
+          created_at?: string
+          framing_score?: number | null
+          gingival_health?: string | null
+          id?: string
+          insertion_quality?: string | null
+          overall_score?: number | null
+          patient_id: string
+          photo_url: string
+          quality_overall?: number | null
+          recommendations?: string[] | null
+          sharpness_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          aligner_number?: number
+          analysis_status?: string
+          analyzed_at?: string | null
+          angle?: string
+          attachment_status?: string | null
+          brightness_score?: number | null
+          created_at?: string
+          framing_score?: number | null
+          gingival_health?: string | null
+          id?: string
+          insertion_quality?: string | null
+          overall_score?: number | null
+          patient_id?: string
+          photo_url?: string
+          quality_overall?: number | null
+          recommendations?: string[] | null
+          sharpness_score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_photos_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           created_at: string
