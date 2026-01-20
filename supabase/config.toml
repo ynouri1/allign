@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.analyze-aligner-photo]
 verify_jwt = false
+
+[functions.create-analysis-alerts]
+verify_jwt = false
