@@ -2,25 +2,31 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePractitionerPatients, usePractitionerProfile } from '@/hooks/usePractitionerData';
+import { usePractitionerAlerts, useResolveAlert } from '@/hooks/usePractitionerAlerts';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Users, Calendar, Mail, Phone, Loader2, User, BarChart3, Camera } from 'lucide-react';
+import { ArrowLeft, Users, Calendar, Mail, Phone, Loader2, User, BarChart3, Camera, Bell } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { PatientPhotosView } from '@/components/practitioner/PatientPhotosView';
+import { AlertsPanelNew } from '@/components/practitioner/AlertsPanelNew';
 
 const NewPractitionerDashboard = () => {
   const navigate = useNavigate();
   const { signOut, isPractitioner, loading } = useAuth();
   const { data: patients, isLoading: loadingPatients } = usePractitionerPatients();
   const { data: profile } = usePractitionerProfile();
+  const { data: alerts = [], isLoading: loadingAlerts } = usePractitionerAlerts();
+  const resolveAlert = useResolveAlert();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const selectedPatient = patients?.find(p => p.id === selectedPatientId);
+  
+  const unresolvedAlertCount = alerts.filter(a => !a.resolved).length;
 
   if (loading) {
     return (
@@ -70,19 +76,50 @@ const NewPractitionerDashboard = () => {
         </div>
 
         {/* Stats */}
-        <Card className="glass-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-primary/10">
-                <Users className="h-6 w-6 text-primary" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card className="glass-card">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-full bg-primary/10">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Patients assignés</p>
+                  <p className="text-2xl font-bold">{patients?.length || 0}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Patients assignés</p>
-                <p className="text-2xl font-bold">{patients?.length || 0}</p>
+            </CardContent>
+          </Card>
+          
+          <Card className={unresolvedAlertCount > 0 ? "glass-card border-warning/50" : "glass-card"}>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-full ${unresolvedAlertCount > 0 ? 'bg-warning/10' : 'bg-success/10'}`}>
+                  <Bell className={`h-6 w-6 ${unresolvedAlertCount > 0 ? 'text-warning' : 'text-success'}`} />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Alertes actives</p>
+                  <p className="text-2xl font-bold">{unresolvedAlertCount}</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Alerts Section */}
+        {unresolvedAlertCount > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Bell className="h-5 w-5 text-warning" />
+              Alertes à traiter
+            </h2>
+            <AlertsPanelNew 
+              alerts={alerts} 
+              onResolve={(id) => resolveAlert.mutate(id)}
+              isResolving={resolveAlert.isPending}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Patient List */}

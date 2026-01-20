@@ -174,6 +174,28 @@ export function useSavePhoto() {
         throw error;
       }
 
+      // Create alerts for practitioners if issues detected
+      if (analysisResult && (
+        analysisResult.attachmentStatus === 'missing' ||
+        analysisResult.attachmentStatus === 'partial' ||
+        analysisResult.insertionQuality === 'poor' ||
+        analysisResult.gingivalHealth === 'inflammation' ||
+        analysisResult.gingivalHealth === 'mild_inflammation'
+      )) {
+        try {
+          await supabase.functions.invoke('create-analysis-alerts', {
+            body: {
+              patientId,
+              photoId: data.id,
+              analysisResult,
+            },
+          });
+        } catch (alertError) {
+          console.error('Error creating alerts:', alertError);
+          // Don't throw - photo was saved successfully
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
