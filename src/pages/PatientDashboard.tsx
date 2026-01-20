@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { ProgressRing } from '@/components/patient/ProgressRing';
 import { AlignerCard } from '@/components/patient/AlignerCard';
-import { PhotoCapture } from '@/components/patient/PhotoCapture';
+import { MultiAngleCapture } from '@/components/patient/MultiAngleCapture';
 import { AnalysisResult } from '@/components/patient/AnalysisResult';
 import { Timeline } from '@/components/patient/Timeline';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { currentPatient, generateAlignerSchedule } from '@/data/mockData';
-import { PhotoAnalysis } from '@/types/patient';
+import { PhotoAnalysis, PhotoAngle } from '@/types/patient';
 import { ArrowLeft, Bell, History, Camera as CameraIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -24,8 +24,9 @@ export default function PatientDashboard() {
   const schedule = generateAlignerSchedule(currentPatient);
   const progress = (currentPatient.currentAligner / currentPatient.totalAligners) * 100;
 
-  const handlePhotoTaken = async (photoUrl: string) => {
+  const handlePhotosComplete = async (photos: { angle: PhotoAngle; url: string }[]) => {
     setIsAnalyzing(true);
+    console.log('Photos captured:', photos.length);
     
     // Simulate AI analysis (in production, this would call Azure Cognitive Services)
     await new Promise(resolve => setTimeout(resolve, 2500));
@@ -115,7 +116,7 @@ export default function PatientDashboard() {
               <CameraIcon className="h-5 w-5 text-primary" />
               Suivi photo
             </h2>
-            <PhotoCapture onPhotoTaken={handlePhotoTaken} isAnalyzing={isAnalyzing} />
+            <MultiAngleCapture onComplete={handlePhotosComplete} isAnalyzing={isAnalyzing} />
           </div>
           
           <div>
