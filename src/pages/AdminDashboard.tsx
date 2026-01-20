@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePatients, usePractitioners, useAssignments, useRemoveAssignment } from '@/hooks/useAdminData';
+import { 
+  usePatients, 
+  usePractitioners, 
+  useAssignments, 
+  useRemoveAssignment,
+  useDeletePatient,
+  useDeletePractitioner,
+  PatientWithProfile,
+  PractitionerWithProfile
+} from '@/hooks/useAdminData';
 import { Header } from '@/components/layout/Header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,7 +20,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CreatePatientDialog } from '@/components/admin/CreatePatientDialog';
 import { CreatePractitionerDialog } from '@/components/admin/CreatePractitionerDialog';
 import { AssignPatientDialog } from '@/components/admin/AssignPatientDialog';
-import { ArrowLeft, Users, Stethoscope, Link2, Loader2, Trash2, Mail, Phone, Calendar } from 'lucide-react';
+import { EditPatientDialog } from '@/components/admin/EditPatientDialog';
+import { EditPractitionerDialog } from '@/components/admin/EditPractitionerDialog';
+import { DeleteConfirmDialog } from '@/components/admin/DeleteConfirmDialog';
+import { ArrowLeft, Users, Stethoscope, Link2, Loader2, Trash2, Mail, Phone, Calendar, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -23,6 +35,56 @@ const AdminDashboard = () => {
   const { data: practitioners, isLoading: loadingPractitioners } = usePractitioners();
   const { data: assignments, isLoading: loadingAssignments } = useAssignments();
   const removeAssignment = useRemoveAssignment();
+  const deletePatient = useDeletePatient();
+  const deletePractitioner = useDeletePractitioner();
+
+  // Edit dialogs state
+  const [editingPatient, setEditingPatient] = useState<PatientWithProfile | null>(null);
+  const [editPatientOpen, setEditPatientOpen] = useState(false);
+  const [editingPractitioner, setEditingPractitioner] = useState<PractitionerWithProfile | null>(null);
+  const [editPractitionerOpen, setEditPractitionerOpen] = useState(false);
+
+  // Delete dialogs state
+  const [deletePatientOpen, setDeletePatientOpen] = useState(false);
+  const [patientToDelete, setPatientToDelete] = useState<PatientWithProfile | null>(null);
+  const [deletePractitionerOpen, setDeletePractitionerOpen] = useState(false);
+  const [practitionerToDelete, setPractitionerToDelete] = useState<PractitionerWithProfile | null>(null);
+
+  const handleEditPatient = (patient: PatientWithProfile) => {
+    setEditingPatient(patient);
+    setEditPatientOpen(true);
+  };
+
+  const handleDeletePatient = (patient: PatientWithProfile) => {
+    setPatientToDelete(patient);
+    setDeletePatientOpen(true);
+  };
+
+  const confirmDeletePatient = async () => {
+    if (patientToDelete) {
+      await deletePatient.mutateAsync(patientToDelete.profile_id);
+      setDeletePatientOpen(false);
+      setPatientToDelete(null);
+    }
+  };
+
+  const handleEditPractitioner = (practitioner: PractitionerWithProfile) => {
+    setEditingPractitioner(practitioner);
+    setEditPractitionerOpen(true);
+  };
+
+  const handleDeletePractitioner = (practitioner: PractitionerWithProfile) => {
+    setPractitionerToDelete(practitioner);
+    setDeletePractitionerOpen(true);
+  };
+
+  const confirmDeletePractitioner = async () => {
+    if (practitionerToDelete) {
+      await deletePractitioner.mutateAsync(practitionerToDelete.profile_id);
+      setDeletePractitionerOpen(false);
+      setPractitionerToDelete(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -136,6 +198,7 @@ const AdminDashboard = () => {
                         <TableHead>Contact</TableHead>
                         <TableHead>Traitement</TableHead>
                         <TableHead>Progrès</TableHead>
+                        <TableHead className="w-24">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -171,6 +234,24 @@ const AdminDashboard = () => {
                               {patient.current_aligner}/{patient.total_aligners} aligneurs
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditPatient(patient)}
+                              >
+                                <Pencil className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeletePatient(patient)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -204,6 +285,7 @@ const AdminDashboard = () => {
                         <TableHead>Contact</TableHead>
                         <TableHead>Spécialité</TableHead>
                         <TableHead>N° Licence</TableHead>
+                        <TableHead className="w-24">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -231,6 +313,24 @@ const AdminDashboard = () => {
                           </TableCell>
                           <TableCell>
                             {practitioner.license_number || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditPractitioner(practitioner)}
+                              >
+                                <Pencil className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeletePractitioner(practitioner)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -299,6 +399,36 @@ const AdminDashboard = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Edit Dialogs */}
+      <EditPatientDialog
+        patient={editingPatient}
+        open={editPatientOpen}
+        onOpenChange={setEditPatientOpen}
+      />
+      <EditPractitionerDialog
+        practitioner={editingPractitioner}
+        open={editPractitionerOpen}
+        onOpenChange={setEditPractitionerOpen}
+      />
+
+      {/* Delete Confirm Dialogs */}
+      <DeleteConfirmDialog
+        open={deletePatientOpen}
+        onOpenChange={setDeletePatientOpen}
+        onConfirm={confirmDeletePatient}
+        title="Supprimer le patient"
+        description={`Êtes-vous sûr de vouloir supprimer ${patientToDelete?.profile.full_name} ? Cette action est irréversible.`}
+        isLoading={deletePatient.isPending}
+      />
+      <DeleteConfirmDialog
+        open={deletePractitionerOpen}
+        onOpenChange={setDeletePractitionerOpen}
+        onConfirm={confirmDeletePractitioner}
+        title="Supprimer le praticien"
+        description={`Êtes-vous sûr de vouloir supprimer ${practitionerToDelete?.profile.full_name} ? Cette action est irréversible.`}
+        isLoading={deletePractitioner.isPending}
+      />
     </div>
   );
 };
