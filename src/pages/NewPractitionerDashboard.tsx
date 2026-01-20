@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ArrowLeft, Users, Calendar, Mail, Phone, Loader2, User } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft, Users, Calendar, Mail, Phone, Loader2, User, BarChart3, Camera } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { PatientPhotosView } from '@/components/practitioner/PatientPhotosView';
 
 const NewPractitionerDashboard = () => {
   const navigate = useNavigate();
@@ -154,79 +156,101 @@ const NewPractitionerDashboard = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Contact Info */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                      <Mail className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Email</p>
-                        <p className="font-medium">{selectedPatient.profile.email}</p>
+                  <Tabs defaultValue="info" className="space-y-4">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="info" className="gap-2">
+                        <User className="h-4 w-4" />
+                        Informations
+                      </TabsTrigger>
+                      <TabsTrigger value="photos" className="gap-2">
+                        <BarChart3 className="h-4 w-4" />
+                        Photos & Analyses
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="info" className="space-y-6">
+                      {/* Contact Info */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                          <Mail className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">Email</p>
+                            <p className="font-medium">{selectedPatient.profile.email}</p>
+                          </div>
+                        </div>
+                        {selectedPatient.profile.phone && (
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                            <Phone className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm text-muted-foreground">Téléphone</p>
+                              <p className="font-medium">{selectedPatient.profile.phone}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    {selectedPatient.profile.phone && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                        <Phone className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">Téléphone</p>
-                          <p className="font-medium">{selectedPatient.profile.phone}</p>
+
+                      {/* Treatment Info */}
+                      <div>
+                        <h3 className="font-semibold mb-3">Informations du traitement</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="p-3 rounded-lg bg-primary/5 text-center">
+                            <p className="text-2xl font-bold text-primary">{selectedPatient.current_aligner}</p>
+                            <p className="text-sm text-muted-foreground">Aligneur actuel</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-secondary/50 text-center">
+                            <p className="text-2xl font-bold">{selectedPatient.total_aligners}</p>
+                            <p className="text-sm text-muted-foreground">Total aligneurs</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-secondary/50 text-center">
+                            <p className="text-2xl font-bold">
+                              {selectedPatient.total_aligners > 0 
+                                ? Math.round((selectedPatient.current_aligner / selectedPatient.total_aligners) * 100)
+                                : 0}%
+                            </p>
+                            <p className="text-sm text-muted-foreground">Progression</p>
+                          </div>
+                          {selectedPatient.next_change_date && (
+                            <div className="p-3 rounded-lg bg-secondary/50 text-center">
+                              <p className="text-lg font-bold">
+                                {format(new Date(selectedPatient.next_change_date), 'dd MMM', { locale: fr })}
+                              </p>
+                              <p className="text-sm text-muted-foreground">Prochain changement</p>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Treatment Info */}
-                  <div>
-                    <h3 className="font-semibold mb-3">Informations du traitement</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="p-3 rounded-lg bg-primary/5 text-center">
-                        <p className="text-2xl font-bold text-primary">{selectedPatient.current_aligner}</p>
-                        <p className="text-sm text-muted-foreground">Aligneur actuel</p>
-                      </div>
-                      <div className="p-3 rounded-lg bg-secondary/50 text-center">
-                        <p className="text-2xl font-bold">{selectedPatient.total_aligners}</p>
-                        <p className="text-sm text-muted-foreground">Total aligneurs</p>
-                      </div>
-                      <div className="p-3 rounded-lg bg-secondary/50 text-center">
-                        <p className="text-2xl font-bold">
-                          {selectedPatient.total_aligners > 0 
-                            ? Math.round((selectedPatient.current_aligner / selectedPatient.total_aligners) * 100)
-                            : 0}%
-                        </p>
-                        <p className="text-sm text-muted-foreground">Progression</p>
-                      </div>
-                      {selectedPatient.next_change_date && (
-                        <div className="p-3 rounded-lg bg-secondary/50 text-center">
-                          <p className="text-lg font-bold">
-                            {format(new Date(selectedPatient.next_change_date), 'dd MMM', { locale: fr })}
-                          </p>
-                          <p className="text-sm text-muted-foreground">Prochain changement</p>
+                      {/* Treatment Start */}
+                      {selectedPatient.treatment_start && (
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                          <Calendar className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">Début du traitement</p>
+                            <p className="font-medium">
+                              {format(new Date(selectedPatient.treatment_start), 'dd MMMM yyyy', { locale: fr })}
+                            </p>
+                          </div>
                         </div>
                       )}
-                    </div>
-                  </div>
 
-                  {/* Treatment Start */}
-                  {selectedPatient.treatment_start && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                      <Calendar className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Début du traitement</p>
-                        <p className="font-medium">
-                          {format(new Date(selectedPatient.treatment_start), 'dd MMMM yyyy', { locale: fr })}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                      {/* Notes */}
+                      {selectedPatient.notes && (
+                        <div>
+                          <h3 className="font-semibold mb-2">Notes</h3>
+                          <p className="text-muted-foreground p-3 rounded-lg bg-secondary/50">
+                            {selectedPatient.notes}
+                          </p>
+                        </div>
+                      )}
+                    </TabsContent>
 
-                  {/* Notes */}
-                  {selectedPatient.notes && (
-                    <div>
-                      <h3 className="font-semibold mb-2">Notes</h3>
-                      <p className="text-muted-foreground p-3 rounded-lg bg-secondary/50">
-                        {selectedPatient.notes}
-                      </p>
-                    </div>
-                  )}
+                    <TabsContent value="photos">
+                      <PatientPhotosView 
+                        patientId={selectedPatient.id} 
+                        patientName={selectedPatient.profile.full_name}
+                      />
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
             ) : (
