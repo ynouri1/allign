@@ -60,6 +60,27 @@ function usePatientAlerts(patientId: string) {
   return useQuery({
     queryKey: ['patient-alerts-history', patientId],
     queryFn: async () => {
+      // First get the practitioner ID for the current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile) return [];
+
+      const { data: practitioner } = await supabase
+        .from('practitioners')
+        .select('id')
+        .eq('profile_id', profile.id)
+        .single();
+
+      if (!practitioner) return [];
+
+      // Query alerts with practitioner_id filter to pass RLS
       const { data, error } = await supabase
         .from('practitioner_alerts')
         .select(`
@@ -78,21 +99,25 @@ function usePatientAlerts(patientId: string) {
           )
         `)
         .eq('patient_id', patientId)
+        .eq('practitioner_id', practitioner.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching patient alerts:', error);
+        throw error;
+      }
 
       // Get resolver profiles and signed URLs
       const alertsWithDetails = await Promise.all(
         (data || []).map(async (alert) => {
           let resolverProfile = null;
           if (alert.resolved_by) {
-            const { data: profile } = await supabase
+            const { data: resolverData } = await supabase
               .from('profiles')
               .select('full_name')
               .eq('id', alert.resolved_by)
               .single();
-            resolverProfile = profile;
+            resolverProfile = resolverData;
           }
 
           let photoWithSignedUrl = alert.photo;
