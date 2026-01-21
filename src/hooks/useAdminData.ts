@@ -385,14 +385,15 @@ export function useDeletePatient() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (profileId: string) => {
-      // Deleting profile will cascade to patient due to FK constraint
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', profileId);
+    mutationFn: async ({ profileId, userId }: { profileId: string; userId: string }) => {
+      // Use edge function to delete user completely (including auth)
+      const { data: result, error } = await supabase.functions.invoke('delete-user', {
+        body: { user_id: userId },
+      });
 
       if (error) throw error;
+      if (result?.error) throw new Error(result.error);
+
       return { success: true };
     },
     onSuccess: () => {
@@ -472,14 +473,15 @@ export function useDeletePractitioner() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (profileId: string) => {
-      // Deleting profile will cascade to practitioner due to FK constraint
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', profileId);
+    mutationFn: async ({ profileId, userId }: { profileId: string; userId: string }) => {
+      // Use edge function to delete user completely (including auth)
+      const { data: result, error } = await supabase.functions.invoke('delete-user', {
+        body: { user_id: userId },
+      });
 
       if (error) throw error;
+      if (result?.error) throw new Error(result.error);
+
       return { success: true };
     },
     onSuccess: () => {
