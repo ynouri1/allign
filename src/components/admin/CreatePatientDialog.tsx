@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreatePatient } from '@/hooks/useAdminData';
 import { Loader2, UserPlus } from 'lucide-react';
+import { TeethSelector3D } from './TeethSelector3D';
 
 export function CreatePatientDialog() {
   const [open, setOpen] = useState(false);
@@ -16,6 +17,7 @@ export function CreatePatientDialog() {
     treatment_start: '',
     total_aligners: '',
   });
+  const [attachmentTeeth, setAttachmentTeeth] = useState<number[]>([]);
 
   const createPatient = useCreatePatient();
 
@@ -29,6 +31,7 @@ export function CreatePatientDialog() {
       phone: formData.phone || undefined,
       treatment_start: formData.treatment_start || undefined,
       total_aligners: formData.total_aligners ? parseInt(formData.total_aligners) : undefined,
+      attachment_teeth: attachmentTeeth,
     });
 
     setFormData({
@@ -39,6 +42,7 @@ export function CreatePatientDialog() {
       treatment_start: '',
       total_aligners: '',
     });
+    setAttachmentTeeth([]);
     setOpen(false);
   };
 
@@ -50,7 +54,7 @@ export function CreatePatientDialog() {
           Ajouter un patient
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nouveau patient</DialogTitle>
         </DialogHeader>
@@ -118,6 +122,16 @@ export function CreatePatientDialog() {
               />
             </div>
           </div>
+
+          {/* 3D Teeth Selector for Attachments */}
+          <div className="space-y-2">
+            <Label>Taquets (attachements)</Label>
+            <TeethSelector3D
+              selectedTeeth={attachmentTeeth}
+              onTeethChange={setAttachmentTeeth}
+            />
+          </div>
+
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Annuler

@@ -87,6 +87,7 @@ export type Database = {
       }
       patients: {
         Row: {
+          attachment_teeth: number[] | null
           created_at: string
           current_aligner: number | null
           id: string
@@ -98,6 +99,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attachment_teeth?: number[] | null
           created_at?: string
           current_aligner?: number | null
           id?: string
@@ -109,6 +111,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attachment_teeth?: number[] | null
           created_at?: string
           current_aligner?: number | null
           id?: string
