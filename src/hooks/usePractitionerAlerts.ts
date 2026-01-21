@@ -151,7 +151,7 @@ export function useResolveAlert() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (alertId: string) => {
+    mutationFn: async ({ alertId, notes }: { alertId: string; notes?: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
@@ -167,6 +167,7 @@ export function useResolveAlert() {
           resolved: true,
           resolved_at: new Date().toISOString(),
           resolved_by: profile?.id,
+          resolution_notes: notes || null,
         })
         .eq('id', alertId);
 
@@ -223,3 +224,4 @@ export function useCreateAlert() {
     },
   });
 }
+

@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
@@ -13,7 +16,8 @@ import {
   Camera, 
   User,
   Calendar,
-  Clock
+  Clock,
+  MessageSquare
 } from 'lucide-react';
 import { PractitionerAlert } from '@/hooks/usePractitionerAlerts';
 import { cn } from '@/lib/utils';
@@ -22,7 +26,7 @@ interface AlertDetailDialogProps {
   alert: PractitionerAlert | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onResolve: (alertId: string) => void;
+  onResolve: (alertId: string, notes?: string) => void;
   isResolving?: boolean;
 }
 
@@ -33,6 +37,8 @@ export function AlertDetailDialog({
   onResolve,
   isResolving 
 }: AlertDetailDialogProps) {
+  const [resolutionNotes, setResolutionNotes] = useState('');
+
   if (!alert) return null;
 
   const getAlertTypeLabel = (type: PractitionerAlert['type']) => {
@@ -254,23 +260,47 @@ export function AlertDetailDialog({
 
         {/* Actions */}
         {!alert.resolved && (
-          <div className="flex gap-3 pt-4 border-t mt-4">
-            <Button 
-              variant="outline" 
-              className="flex-1"
-              onClick={() => onOpenChange(false)}
-            >
-              Fermer
-            </Button>
-            <Button 
-              variant="default"
-              className="flex-1 gap-2"
-              onClick={() => onResolve(alert.id)}
-              disabled={isResolving}
-            >
-              <CheckCircle className="h-4 w-4" />
-              Marquer comme résolu
-            </Button>
+          <div className="space-y-4 pt-4 border-t mt-4">
+            {/* Resolution notes input */}
+            <div className="space-y-2">
+              <Label htmlFor="resolution-notes" className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Commentaire de résolution (optionnel)
+              </Label>
+              <Textarea
+                id="resolution-notes"
+                placeholder="Ajoutez un commentaire sur cette résolution..."
+                value={resolutionNotes}
+                onChange={(e) => setResolutionNotes(e.target.value)}
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => {
+                  setResolutionNotes('');
+                  onOpenChange(false);
+                }}
+              >
+                Fermer
+              </Button>
+              <Button 
+                variant="default"
+                className="flex-1 gap-2"
+                onClick={() => {
+                  onResolve(alert.id, resolutionNotes.trim() || undefined);
+                  setResolutionNotes('');
+                }}
+                disabled={isResolving}
+              >
+                <CheckCircle className="h-4 w-4" />
+                Marquer comme résolu
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
