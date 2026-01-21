@@ -44,7 +44,7 @@ export function PatientPhotosView({ patientId, patientName }: PatientPhotosViewP
     <div className="space-y-6">
       <StatsOverview photos={photos} />
 
-      <Tabs defaultValue="progress" className="space-y-4">
+      <Tabs defaultValue="history" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="progress" className="gap-2">
             <BarChart3 className="h-4 w-4" />
