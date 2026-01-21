@@ -96,11 +96,11 @@ export default function Index() {
 
           {/* Logo */}
           <div className="flex items-center justify-center gap-3 mb-12">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl gradient-primary shadow-lg shadow-primary/25">
-              <span className="text-2xl font-bold text-primary-foreground">A</span>
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl gradient-primary shadow-lg shadow-primary/25 overflow-hidden">
+              <img src="/favicon.png" alt="alignbygn" className="h-10 w-10 object-contain" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gradient">AlignTrack</h1>
+              <h1 className="text-3xl font-bold text-gradient">alignbygn</h1>
               <p className="text-sm text-muted-foreground">Suivi intelligent d'aligneurs</p>
             </div>
           </div>

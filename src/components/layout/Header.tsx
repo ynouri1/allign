@@ -27,11 +27,11 @@ export function Header({ userType, userRole, userName, alertCount = 0, onMenuCli
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-primary">
-              <span className="text-lg font-bold text-primary-foreground">A</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-primary overflow-hidden">
+              <img src="/favicon.png" alt="alignbygn" className="h-7 w-7 object-contain" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-lg font-semibold text-gradient">AlignTrack</h1>
+              <h1 className="text-lg font-semibold text-gradient">alignbygn</h1>
             <p className="text-xs text-muted-foreground">
                 {roleLabel}
               </p>
