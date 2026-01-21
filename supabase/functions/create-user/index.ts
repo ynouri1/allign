@@ -62,6 +62,7 @@ serve(async (req) => {
       // Patient-specific fields
       treatment_start,
       total_aligners,
+      attachment_teeth,
       // Practitioner-specific fields
       specialty,
       license_number
@@ -128,6 +129,7 @@ serve(async (req) => {
           profile_id: profile.id,
           treatment_start: treatment_start || null,
           total_aligners: total_aligners || 0,
+          attachment_teeth: attachment_teeth || [],
         });
 
       if (patientError) {

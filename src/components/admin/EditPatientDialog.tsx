@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useUpdatePatient, PatientWithProfile } from '@/hooks/useAdminData';
 import { Loader2 } from 'lucide-react';
+import { TeethSelector3D } from './TeethSelector3D';
 
 interface EditPatientDialogProps {
   patient: PatientWithProfile | null;
@@ -23,6 +24,7 @@ export function EditPatientDialog({ patient, open, onOpenChange }: EditPatientDi
     next_change_date: '',
     notes: '',
   });
+  const [attachmentTeeth, setAttachmentTeeth] = useState<number[]>([]);
 
   const updatePatient = useUpdatePatient();
 
@@ -37,6 +39,7 @@ export function EditPatientDialog({ patient, open, onOpenChange }: EditPatientDi
         next_change_date: patient.next_change_date || '',
         notes: patient.notes || '',
       });
+      setAttachmentTeeth(patient.attachment_teeth || []);
     }
   }, [patient]);
 
@@ -54,6 +57,7 @@ export function EditPatientDialog({ patient, open, onOpenChange }: EditPatientDi
       current_aligner: formData.current_aligner ? parseInt(formData.current_aligner) : undefined,
       next_change_date: formData.next_change_date || undefined,
       notes: formData.notes || undefined,
+      attachment_teeth: attachmentTeeth,
     });
 
     onOpenChange(false);
@@ -61,7 +65,7 @@ export function EditPatientDialog({ patient, open, onOpenChange }: EditPatientDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Modifier le patient</DialogTitle>
         </DialogHeader>
@@ -127,6 +131,16 @@ export function EditPatientDialog({ patient, open, onOpenChange }: EditPatientDi
               />
             </div>
           </div>
+          
+          {/* 3D Teeth Selector for Attachments */}
+          <div className="space-y-2">
+            <Label>Taquets (attachements)</Label>
+            <TeethSelector3D
+              selectedTeeth={attachmentTeeth}
+              onTeethChange={setAttachmentTeeth}
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="edit_notes">Notes</Label>
             <Textarea

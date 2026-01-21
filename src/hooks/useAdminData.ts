@@ -20,6 +20,7 @@ export interface PatientWithProfile {
   current_aligner: number;
   next_change_date: string | null;
   notes: string | null;
+  attachment_teeth: number[] | null;
   profile: {
     id: string;
     user_id?: string;
@@ -74,6 +75,7 @@ export function usePatients() {
           current_aligner,
           next_change_date,
           notes,
+          attachment_teeth,
           profile:profiles!patients_profile_id_fkey (
             id,
             user_id,
@@ -159,6 +161,7 @@ export function useCreatePatient() {
       phone?: string;
       treatment_start?: string;
       total_aligners?: number;
+      attachment_teeth?: number[];
     }) => {
       // Use edge function to create user without losing admin session
       const { data: result, error } = await supabase.functions.invoke('create-user', {
@@ -170,6 +173,7 @@ export function useCreatePatient() {
           role: 'patient',
           treatment_start: data.treatment_start,
           total_aligners: data.total_aligners,
+          attachment_teeth: data.attachment_teeth,
         },
       });
 
@@ -329,6 +333,7 @@ export function useUpdatePatient() {
       current_aligner?: number;
       next_change_date?: string;
       notes?: string;
+      attachment_teeth?: number[];
     }) => {
       // Update profile
       const { error: profileError } = await supabase
@@ -350,6 +355,7 @@ export function useUpdatePatient() {
           current_aligner: data.current_aligner || 1,
           next_change_date: data.next_change_date || null,
           notes: data.notes || null,
+          attachment_teeth: data.attachment_teeth || [],
         })
         .eq('id', data.patientId);
 
