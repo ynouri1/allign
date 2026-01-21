@@ -55,6 +55,7 @@ function useMyPatientData() {
         totalAligners: patient.total_aligners || 15,
         treatmentStart: patient.treatment_start ? new Date(patient.treatment_start) : new Date(),
         nextChangeDate: patient.next_change_date ? new Date(patient.next_change_date) : addDays(new Date(), 14),
+        attachmentTeeth: (patient as any).attachment_teeth || [],
       };
     },
     enabled: !!user,
@@ -105,7 +106,7 @@ export default function PatientDashboard() {
     }
 
     toast.info('Analyse IA en cours...');
-    const analysis = await analyzePhoto(frontPhoto.url);
+    const analysis = await analyzePhoto(frontPhoto.url, patientData?.attachmentTeeth || []);
     
     if (analysis) {
       setLatestAnalysis(analysis);
