@@ -5,7 +5,7 @@ import { AnalysisProgressChart } from '@/components/patient/AnalysisProgressChar
 import { AnalysisHistory } from '@/components/patient/AnalysisHistory';
 import { StatsOverview } from '@/components/patient/StatsOverview';
 import { PatientAlertsHistory } from './PatientAlertsHistory';
-import { BarChart3, History, Loader2, Camera, Bell } from 'lucide-react';
+import { BarChart3, History, Loader2, Camera } from 'lucide-react';
 
 interface PatientPhotosViewProps {
   patientId: string;
@@ -45,18 +45,14 @@ export function PatientPhotosView({ patientId, patientName }: PatientPhotosViewP
       <StatsOverview photos={photos} />
 
       <Tabs defaultValue="progress" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="progress" className="gap-2">
             <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">Progression</span>
+            Progression
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <History className="h-4 w-4" />
-            <span className="hidden sm:inline">Historique</span>
-          </TabsTrigger>
-          <TabsTrigger value="alerts" className="gap-2">
-            <Bell className="h-4 w-4" />
-            <span className="hidden sm:inline">Alertes</span>
+            Historique
           </TabsTrigger>
         </TabsList>
 
@@ -64,11 +60,8 @@ export function PatientPhotosView({ patientId, patientName }: PatientPhotosViewP
           <AnalysisProgressChart photos={photos} />
         </TabsContent>
 
-        <TabsContent value="history">
+        <TabsContent value="history" className="space-y-6">
           <AnalysisHistory photos={photos} />
-        </TabsContent>
-
-        <TabsContent value="alerts">
           <PatientAlertsHistory patientId={patientId} />
         </TabsContent>
       </Tabs>
