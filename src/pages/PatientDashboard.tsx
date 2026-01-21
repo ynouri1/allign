@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { ProgressRing } from '@/components/patient/ProgressRing';
 import { AlignerCard } from '@/components/patient/AlignerCard';
@@ -11,33 +11,88 @@ import { Timeline } from '@/components/patient/Timeline';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { currentPatient, generateAlignerSchedule } from '@/data/mockData';
 import { PhotoAnalysis, PhotoAngle } from '@/types/patient';
 import { ArrowLeft, Bell, History, Camera as CameraIcon, BarChart3, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { useAlignerAnalysis } from '@/hooks/useAlignerAnalysis';
 import { useMyPhotos, useSavePhoto, PatientPhotoRecord } from '@/hooks/usePatientPhotos';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+
+// Hook pour récupérer les données du patient connecté
+function useMyPatientData() {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['my-patient-data', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (!profile) return null;
+      
+      const { data: patient } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('profile_id', profile.id)
+        .single();
+      
+      if (!patient) return null;
+      
+      return {
+        id: patient.id,
+        name: profile.full_name,
+        currentAligner: patient.current_aligner || 1,
+        totalAligners: patient.total_aligners || 15,
+        treatmentStart: patient.treatment_start ? new Date(patient.treatment_start) : new Date(),
+        nextChangeDate: patient.next_change_date ? new Date(patient.next_change_date) : addDays(new Date(), 14),
+      };
+    },
+    enabled: !!user,
+  });
+}
 
 export default function PatientDashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { analyzePhoto, isAnalyzing } = useAlignerAnalysis();
   const { data: photosData, isLoading: isLoadingPhotos } = useMyPhotos();
+  const { data: patientData, isLoading: isLoadingPatient } = useMyPatientData();
   const savePhoto = useSavePhoto();
   
-  const [latestAnalysis, setLatestAnalysis] = useState<PhotoAnalysis | null>(
-    currentPatient.photos[0]?.analysisResult || null
-  );
-
-  const schedule = generateAlignerSchedule(currentPatient);
-  const progress = (currentPatient.currentAligner / currentPatient.totalAligners) * 100;
+  const [latestAnalysis, setLatestAnalysis] = useState<PhotoAnalysis | null>(null);
 
   const photos = photosData?.photos || [];
   const patientId = photosData?.patientId;
+  
+  // Générer le planning des gouttières
+  const generateSchedule = () => {
+    if (!patientData) return [];
+    const schedule = [];
+    const startDate = patientData.treatmentStart;
+    for (let i = 1; i <= patientData.totalAligners; i++) {
+      schedule.push({
+        alignerNumber: i,
+        startDate: addDays(startDate, (i - 1) * 14),
+        endDate: addDays(startDate, i * 14 - 1),
+        status: i < patientData.currentAligner ? 'completed' as const : 
+                i === patientData.currentAligner ? 'current' as const : 'upcoming' as const,
+      });
+    }
+    return schedule;
+  };
+
+  const schedule = generateSchedule();
+  const progress = patientData ? (patientData.currentAligner / patientData.totalAligners) * 100 : 0;
 
   const handlePhotosComplete = async (capturedPhotos: { angle: PhotoAngle; url: string }[]) => {
     console.log('Photos captured:', capturedPhotos.length);
@@ -57,13 +112,13 @@ export default function PatientDashboard() {
       toast.success('Analyse terminée !');
 
       // Save to database if we have a patient ID
-      if (patientId) {
+      if (patientId && patientData) {
         for (const photo of capturedPhotos) {
           await savePhoto.mutateAsync({
             patientId,
             photoDataUrl: photo.url,
             angle: photo.angle,
-            alignerNumber: currentPatient.currentAligner,
+            alignerNumber: patientData.currentAligner,
             analysisResult: photo.angle === frontPhoto.angle ? {
               status: analysis.status,
               attachmentStatus: analysis.attachmentStatus,
@@ -79,12 +134,33 @@ export default function PatientDashboard() {
     }
   };
 
+  // Loading state
+  if (isLoadingPatient) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!patientData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="p-8 text-center">
+          <p className="text-muted-foreground">Aucun dossier patient trouvé.</p>
+          <Button onClick={() => navigate('/')} className="mt-4">Retour</Button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header 
         userType="patient" 
-        userName={currentPatient.name}
-        alertCount={currentPatient.alerts.filter(a => !a.resolved).length}
+        userName={patientData.name}
+        alertCount={0}
+        onLogout={() => signOut()}
       />
       
       <main className="container max-w-4xl py-6 px-4 space-y-6 animate-fade-in">
@@ -92,11 +168,11 @@ export default function PatientDashboard() {
         <Button 
           variant="ghost" 
           size="sm" 
-          onClick={() => navigate('/')}
+          onClick={() => signOut().then(() => navigate('/'))}
           className="mb-2"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Retour à l'accueil
+          Déconnexion
         </Button>
 
         {/* Hero section with progress */}
@@ -104,18 +180,18 @@ export default function PatientDashboard() {
           <Card className="p-6 flex flex-col items-center justify-center glass-card">
             <ProgressRing progress={progress} size={160} />
             <p className="mt-4 text-center text-muted-foreground">
-              Gouttière <span className="font-semibold text-foreground">{currentPatient.currentAligner}</span> sur {currentPatient.totalAligners}
+              Gouttière <span className="font-semibold text-foreground">{patientData.currentAligner}</span> sur {patientData.totalAligners}
             </p>
             <p className="text-sm text-muted-foreground">
-              Début du traitement : {format(currentPatient.treatmentStart, 'd MMMM yyyy', { locale: fr })}
+              Début du traitement : {format(patientData.treatmentStart, 'd MMMM yyyy', { locale: fr })}
             </p>
           </Card>
           
           <div className="space-y-4">
             <AlignerCard
-              currentAligner={currentPatient.currentAligner}
-              totalAligners={currentPatient.totalAligners}
-              nextChangeDate={currentPatient.nextChangeDate}
+              currentAligner={patientData.currentAligner}
+              totalAligners={patientData.totalAligners}
+              nextChangeDate={patientData.nextChangeDate}
             />
             
             {/* Quick actions */}
@@ -222,30 +298,6 @@ export default function PatientDashboard() {
             )}
           </TabsContent>
         </Tabs>
-
-        {/* Alerts */}
-        {currentPatient.alerts.filter(a => !a.resolved).length > 0 && (
-          <Card className="p-6 border-warning/30 bg-warning/5">
-            <h2 className="text-lg font-semibold mb-4 text-warning">
-              ⚠️ Alertes actives
-            </h2>
-            <div className="space-y-3">
-              {currentPatient.alerts.filter(a => !a.resolved).map(alert => (
-                <div key={alert.id} className="flex items-start gap-3 p-3 bg-background/50 rounded-lg">
-                  <div className="text-warning mt-0.5">
-                    <Bell className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{alert.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {format(alert.createdAt, 'd MMM à HH:mm', { locale: fr })}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
       </main>
     </div>
   );
