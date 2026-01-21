@@ -61,8 +61,11 @@ const AdminDashboard = () => {
   };
 
   const confirmDeletePatient = async () => {
-    if (patientToDelete) {
-      await deletePatient.mutateAsync(patientToDelete.profile_id);
+    if (patientToDelete && patientToDelete.profile.user_id) {
+      await deletePatient.mutateAsync({
+        profileId: patientToDelete.profile_id,
+        userId: patientToDelete.profile.user_id,
+      });
       setDeletePatientOpen(false);
       setPatientToDelete(null);
     }
@@ -79,8 +82,11 @@ const AdminDashboard = () => {
   };
 
   const confirmDeletePractitioner = async () => {
-    if (practitionerToDelete) {
-      await deletePractitioner.mutateAsync(practitionerToDelete.profile_id);
+    if (practitionerToDelete && practitionerToDelete.profile.user_id) {
+      await deletePractitioner.mutateAsync({
+        profileId: practitionerToDelete.profile_id,
+        userId: practitionerToDelete.profile.user_id,
+      });
       setDeletePractitionerOpen(false);
       setPractitionerToDelete(null);
     }
