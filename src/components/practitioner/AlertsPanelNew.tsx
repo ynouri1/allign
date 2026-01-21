@@ -11,7 +11,7 @@ import { AlertDetailDialog } from './AlertDetailDialog';
 
 interface AlertsPanelNewProps {
   alerts: PractitionerAlert[];
-  onResolve: (alertId: string) => void;
+  onResolve: (alertId: string, notes?: string) => void;
   isResolving?: boolean;
 }
 
@@ -71,8 +71,8 @@ export function AlertsPanelNew({ alerts, onResolve, isResolving }: AlertsPanelNe
     );
   }
 
-  const handleResolve = (alertId: string) => {
-    onResolve(alertId);
+  const handleResolve = (alertId: string, notes?: string) => {
+    onResolve(alertId, notes);
     setSelectedAlert(null);
   };
 

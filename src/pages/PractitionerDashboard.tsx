@@ -117,7 +117,7 @@ export default function PractitionerDashboard() {
                 ) : (
                   <AlertsPanelNew 
                     alerts={alerts}
-                    onResolve={(id) => resolveAlert.mutate(id)}
+                    onResolve={(id, notes) => resolveAlert.mutate({ alertId: id, notes })}
                     isResolving={resolveAlert.isPending}
                   />
                 )}

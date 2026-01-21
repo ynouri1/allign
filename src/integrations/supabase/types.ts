@@ -137,6 +137,7 @@ export type Database = {
           patient_id: string
           photo_id: string | null
           practitioner_id: string
+          resolution_notes: string | null
           resolved: boolean
           resolved_at: string | null
           resolved_by: string | null
@@ -151,6 +152,7 @@ export type Database = {
           patient_id: string
           photo_id?: string | null
           practitioner_id: string
+          resolution_notes?: string | null
           resolved?: boolean
           resolved_at?: string | null
           resolved_by?: string | null
@@ -165,6 +167,7 @@ export type Database = {
           patient_id?: string
           photo_id?: string | null
           practitioner_id?: string
+          resolution_notes?: string | null
           resolved?: boolean
           resolved_at?: string | null
           resolved_by?: string | null
