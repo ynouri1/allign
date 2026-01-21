@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Stethoscope, User, ArrowRight, Shield, Camera, Bell, Sparkles, LogIn, Settings } from 'lucide-react';
@@ -7,7 +8,22 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function Index() {
   const navigate = useNavigate();
-  const { user, isAdmin, isPractitioner, signOut } = useAuth();
+  const { user, isAdmin, isPractitioner, isPatient, loading, signOut } = useAuth();
+
+  // Rediriger automatiquement selon le rôle
+  useEffect(() => {
+    if (loading) return;
+    
+    if (user) {
+      if (isPatient && !isPractitioner && !isAdmin) {
+        navigate('/patient');
+      } else if (isPractitioner && !isAdmin) {
+        navigate('/practitioner-new');
+      } else if (isAdmin) {
+        // Admin reste sur la page d'accueil avec accès à tout
+      }
+    }
+  }, [user, isPatient, isPractitioner, isAdmin, loading, navigate]);
 
   const features = [
     {
