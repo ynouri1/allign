@@ -205,6 +205,8 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
       const dataUrl = e.target?.result as string;
       setPreviewUrl(dataUrl);
       stopCamera();
+      // Open the dialog to show the preview
+      setIsOpen(true);
     };
     reader.readAsDataURL(file);
     
