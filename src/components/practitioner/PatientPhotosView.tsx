@@ -1,13 +1,11 @@
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { PatientPhotoRecord, usePatientPhotos } from '@/hooks/usePatientPhotos';
+import { usePatientPhotos } from '@/hooks/usePatientPhotos';
 import { AnalysisProgressChart } from '@/components/patient/AnalysisProgressChart';
 import { AnalysisHistory } from '@/components/patient/AnalysisHistory';
 import { StatsOverview } from '@/components/patient/StatsOverview';
-import { BarChart3, History, Loader2, Camera } from 'lucide-react';
+import { PatientAlertsHistory } from './PatientAlertsHistory';
+import { BarChart3, History, Loader2, Camera, Bell } from 'lucide-react';
 
 interface PatientPhotosViewProps {
   patientId: string;
@@ -28,12 +26,17 @@ export function PatientPhotosView({ patientId, patientName }: PatientPhotosViewP
 
   if (!photos || photos.length === 0) {
     return (
-      <Card className="p-8 text-center">
-        <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-        <p className="text-muted-foreground">
-          {patientName} n'a pas encore pris de photos.
-        </p>
-      </Card>
+      <div className="space-y-6">
+        <Card className="p-8 text-center">
+          <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+          <p className="text-muted-foreground">
+            {patientName} n'a pas encore pris de photos.
+          </p>
+        </Card>
+        
+        {/* Still show alerts even without photos */}
+        <PatientAlertsHistory patientId={patientId} />
+      </div>
     );
   }
 
@@ -42,14 +45,18 @@ export function PatientPhotosView({ patientId, patientName }: PatientPhotosViewP
       <StatsOverview photos={photos} />
 
       <Tabs defaultValue="progress" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="progress" className="gap-2">
             <BarChart3 className="h-4 w-4" />
-            Progression
+            <span className="hidden sm:inline">Progression</span>
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <History className="h-4 w-4" />
-            Historique
+            <span className="hidden sm:inline">Historique</span>
+          </TabsTrigger>
+          <TabsTrigger value="alerts" className="gap-2">
+            <Bell className="h-4 w-4" />
+            <span className="hidden sm:inline">Alertes</span>
           </TabsTrigger>
         </TabsList>
 
@@ -59,6 +66,10 @@ export function PatientPhotosView({ patientId, patientName }: PatientPhotosViewP
 
         <TabsContent value="history">
           <AnalysisHistory photos={photos} />
+        </TabsContent>
+
+        <TabsContent value="alerts">
+          <PatientAlertsHistory patientId={patientId} />
         </TabsContent>
       </Tabs>
     </div>
