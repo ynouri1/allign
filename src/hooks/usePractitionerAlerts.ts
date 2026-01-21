@@ -39,6 +39,32 @@ export interface PractitionerAlert {
   };
 }
 
+// Helper function to extract file path from URL and get signed URL
+async function getSignedUrl(photoUrl: string): Promise<string> {
+  try {
+    // Extract the file path from the URL
+    // URL format: https://xxx.supabase.co/storage/v1/object/public/aligner-photos/patient-id/filename.jpg
+    const match = photoUrl.match(/aligner-photos\/(.+)$/);
+    if (!match) return photoUrl;
+    
+    const filePath = match[1];
+    
+    const { data, error } = await supabase.storage
+      .from('aligner-photos')
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+    
+    if (error || !data) {
+      console.error('Error creating signed URL:', error);
+      return photoUrl;
+    }
+    
+    return data.signedUrl;
+  } catch (err) {
+    console.error('Error in getSignedUrl:', err);
+    return photoUrl;
+  }
+}
+
 export function usePractitionerAlerts() {
   return useQuery({
     queryKey: ['practitioner-alerts'],
@@ -99,7 +125,24 @@ export function usePractitionerAlerts() {
         throw error;
       }
 
-      return data as PractitionerAlert[];
+      // Generate signed URLs for photos
+      const alertsWithSignedUrls = await Promise.all(
+        (data as PractitionerAlert[]).map(async (alert) => {
+          if (alert.photo?.photo_url) {
+            const signedUrl = await getSignedUrl(alert.photo.photo_url);
+            return {
+              ...alert,
+              photo: {
+                ...alert.photo,
+                photo_url: signedUrl,
+              },
+            };
+          }
+          return alert;
+        })
+      );
+
+      return alertsWithSignedUrls;
     },
   });
 }
