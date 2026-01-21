@@ -6,7 +6,10 @@ import { toast } from 'sonner';
 export function useAlignerAnalysis() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const analyzePhoto = useCallback(async (photoUrl: string): Promise<PhotoAnalysis | null> => {
+  const analyzePhoto = useCallback(async (
+    photoUrl: string, 
+    attachmentTeeth: number[] = []
+  ): Promise<PhotoAnalysis | null> => {
     setIsAnalyzing(true);
 
     try {
@@ -35,6 +38,7 @@ export function useAlignerAnalysis() {
         body: { 
           imageBase64,
           imageUrl: imageUrlParam,
+          attachmentTeeth,
         },
       });
 
