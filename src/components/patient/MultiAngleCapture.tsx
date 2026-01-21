@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
-import { Camera, X, Volume2, VolumeX, HelpCircle } from 'lucide-react';
+import { Camera, X, Volume2, VolumeX, HelpCircle, Upload, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PhotoAngle, PHOTO_ANGLES } from '@/types/patient';
 import { PhotoTutorial } from './PhotoTutorial';
@@ -35,6 +35,7 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
   } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const analysisIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -194,21 +195,64 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
     setCurrentAngleIndex(prev => prev + 1);
   };
 
+  // Handle file upload from gallery
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setPreviewUrl(dataUrl);
+      stopCamera();
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <>
-      {/* Trigger card */}
-      <Card 
-        className="group cursor-pointer border-2 border-dashed border-primary/30 hover:border-primary/60 transition-all duration-300 p-8 flex flex-col items-center justify-center gap-4 bg-primary/5 hover:bg-primary/10"
-        onClick={() => setIsOpen(true)}
-      >
-        <div className="h-16 w-16 rounded-2xl gradient-primary flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-          <Camera className="h-8 w-8 text-primary-foreground" />
-        </div>
-        <div className="text-center">
-          <p className="font-semibold text-foreground">Prendre des photos</p>
-          <p className="text-sm text-muted-foreground">Capture guidée multi-angles avec assistance IA</p>
-        </div>
-      </Card>
+      {/* Hidden file input for gallery import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
+
+      {/* Trigger cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card 
+          className="group cursor-pointer border-2 border-dashed border-primary/30 hover:border-primary/60 transition-all duration-300 p-6 flex flex-col items-center justify-center gap-3 bg-primary/5 hover:bg-primary/10"
+          onClick={() => setIsOpen(true)}
+        >
+          <div className="h-12 w-12 rounded-xl gradient-primary flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+            <Camera className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <div className="text-center">
+            <p className="font-medium text-foreground text-sm">Caméra</p>
+            <p className="text-xs text-muted-foreground">Capture guidée</p>
+          </div>
+        </Card>
+
+        <Card 
+          className="group cursor-pointer border-2 border-dashed border-secondary/50 hover:border-secondary transition-all duration-300 p-6 flex flex-col items-center justify-center gap-3 bg-secondary/5 hover:bg-secondary/10"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <div className="h-12 w-12 rounded-xl bg-secondary flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+            <ImageIcon className="h-6 w-6 text-secondary-foreground" />
+          </div>
+          <div className="text-center">
+            <p className="font-medium text-foreground text-sm">Galerie</p>
+            <p className="text-xs text-muted-foreground">Importer photo</p>
+          </div>
+        </Card>
+      </div>
 
       {/* Capture dialog */}
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
