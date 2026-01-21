@@ -14,6 +14,7 @@ import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { PatientPhotosView } from '@/components/practitioner/PatientPhotosView';
 import { AlertsPanelNew } from '@/components/practitioner/AlertsPanelNew';
+import { TeethViewer3D } from '@/components/practitioner/TeethViewer3D';
 
 const NewPractitionerDashboard = () => {
   const navigate = useNavigate();
@@ -279,6 +280,12 @@ const NewPractitionerDashboard = () => {
                           </p>
                         </div>
                       )}
+
+                      {/* Teeth with Attachments */}
+                      <div>
+                        <h3 className="font-semibold mb-3">Taquets (attachements)</h3>
+                        <TeethViewer3D attachmentTeeth={selectedPatient.attachment_teeth || []} />
+                      </div>
                     </TabsContent>
 
                     <TabsContent value="photos">

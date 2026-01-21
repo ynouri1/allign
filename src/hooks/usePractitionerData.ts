@@ -10,6 +10,7 @@ interface PatientWithProfile {
   current_aligner: number;
   next_change_date: string | null;
   notes: string | null;
+  attachment_teeth: number[] | null;
   profile: {
     id: string;
     full_name: string;
@@ -56,6 +57,7 @@ export function usePractitionerPatients() {
             current_aligner,
             next_change_date,
             notes,
+            attachment_teeth,
             profile:profiles!patients_profile_id_fkey (
               id,
               full_name,
