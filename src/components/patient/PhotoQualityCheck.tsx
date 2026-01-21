@@ -119,11 +119,11 @@ export function PhotoQualityCheck({
   return (
     <div className="space-y-4">
       {/* Photo preview */}
-      <div className="relative aspect-[4/3] rounded-xl overflow-hidden">
+      <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-black">
         <img 
           src={photoUrl} 
           alt="Captured photo" 
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
         />
         
         {/* Status badge */}
