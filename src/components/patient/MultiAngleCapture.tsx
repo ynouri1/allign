@@ -33,6 +33,8 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
     brightness: { value: number; status: 'too_dark' | 'good' | 'too_bright' };
     sharpness: { value: number; status: 'blurry' | 'acceptable' | 'sharp' };
   } | null>(null);
+  // Track if current photo came from gallery (single photo mode)
+  const [isGalleryImport, setIsGalleryImport] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -104,6 +106,7 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
       setCapturedPhotos([]);
       setCurrentAngleIndex(0);
       setShowTutorial(false);
+      setIsGalleryImport(false);
     }
   };
 
@@ -156,7 +159,21 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
 
   // Accept photo and continue
   const handleAcceptPhoto = () => {
-    if (!previewUrl || !currentAngle) return;
+    if (!previewUrl) return;
+
+    // For gallery imports, treat as single front photo and complete immediately
+    if (isGalleryImport) {
+      const singlePhoto: CapturedPhoto = {
+        angle: 'front',
+        url: previewUrl,
+      };
+      onComplete([singlePhoto]);
+      handleOpenChange(false);
+      return;
+    }
+
+    // Multi-angle camera flow
+    if (!currentAngle) return;
 
     const newPhoto: CapturedPhoto = {
       angle: currentAngle.angle,
@@ -195,7 +212,7 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
     setCurrentAngleIndex(prev => prev + 1);
   };
 
-  // Handle file upload from gallery
+  // Handle file upload from gallery - direct single photo mode
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -203,8 +220,14 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
+      // Set as gallery import (single photo mode)
+      setIsGalleryImport(true);
       setPreviewUrl(dataUrl);
       stopCamera();
+      // Reset multi-angle state
+      setCurrentAngleIndex(0);
+      setCapturedPhotos([]);
+      setShowTutorial(false);
       // Open the dialog to show the preview
       setIsOpen(true);
     };
@@ -262,7 +285,7 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>
-                {showTutorial ? 'Guide de capture' : `Photo ${currentAngleIndex + 1}/${requiredAngles.length}`}
+                {showTutorial ? 'Guide de capture' : isGalleryImport ? 'Photo importée' : `Photo ${currentAngleIndex + 1}/${requiredAngles.length}`}
               </DialogTitle>
               <div className="flex items-center gap-2">
                 {voiceSupported && !showTutorial && (
