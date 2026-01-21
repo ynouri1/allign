@@ -40,10 +40,44 @@ export function usePatientPhotos(patientId?: string) {
         throw error;
       }
 
-      return data as PatientPhotoRecord[];
+      // Generate signed URLs for each photo
+      const photosWithSignedUrls = await Promise.all(
+        (data as PatientPhotoRecord[]).map(async (photo) => {
+          const signedUrl = await getSignedUrl(photo.photo_url);
+          return { ...photo, photo_url: signedUrl };
+        })
+      );
+
+      return photosWithSignedUrls;
     },
     enabled: !!patientId,
   });
+}
+
+// Helper function to extract file path from URL and get signed URL
+async function getSignedUrl(photoUrl: string): Promise<string> {
+  try {
+    // Extract the file path from the URL
+    // URL format: https://xxx.supabase.co/storage/v1/object/public/aligner-photos/patient-id/filename.jpg
+    const match = photoUrl.match(/aligner-photos\/(.+)$/);
+    if (!match) return photoUrl;
+    
+    const filePath = match[1];
+    
+    const { data, error } = await supabase.storage
+      .from('aligner-photos')
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+    
+    if (error || !data) {
+      console.error('Error creating signed URL:', error);
+      return photoUrl;
+    }
+    
+    return data.signedUrl;
+  } catch (err) {
+    console.error('Error in getSignedUrl:', err);
+    return photoUrl;
+  }
 }
 
 export function useMyPhotos() {
@@ -84,7 +118,15 @@ export function useMyPhotos() {
         throw error;
       }
 
-      return { photos: data as PatientPhotoRecord[], patientId: patient.id };
+      // Generate signed URLs for each photo
+      const photosWithSignedUrls = await Promise.all(
+        (data as PatientPhotoRecord[]).map(async (photo) => {
+          const signedUrl = await getSignedUrl(photo.photo_url);
+          return { ...photo, photo_url: signedUrl };
+        })
+      );
+
+      return { photos: photosWithSignedUrls, patientId: patient.id };
     },
   });
 }
