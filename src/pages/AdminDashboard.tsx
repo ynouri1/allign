@@ -23,7 +23,8 @@ import { AssignPatientDialog } from '@/components/admin/AssignPatientDialog';
 import { EditPatientDialog } from '@/components/admin/EditPatientDialog';
 import { EditPractitionerDialog } from '@/components/admin/EditPractitionerDialog';
 import { DeleteConfirmDialog } from '@/components/admin/DeleteConfirmDialog';
-import { ArrowLeft, Users, Stethoscope, Link2, Loader2, Trash2, Mail, Phone, Calendar, Pencil } from 'lucide-react';
+import { VideoManagement } from '@/components/admin/VideoManagement';
+import { ArrowLeft, Users, Stethoscope, Link2, Loader2, Trash2, Mail, Phone, Calendar, Pencil, Video } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -174,10 +175,14 @@ const AdminDashboard = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="patients" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 max-w-md">
+          <TabsList className="grid w-full grid-cols-4 max-w-lg">
             <TabsTrigger value="patients">Patients</TabsTrigger>
             <TabsTrigger value="practitioners">Praticiens</TabsTrigger>
             <TabsTrigger value="assignments">Assignations</TabsTrigger>
+            <TabsTrigger value="videos" className="gap-1">
+              <Video className="h-4 w-4" />
+              Vidéos
+            </TabsTrigger>
           </TabsList>
 
           {/* Patients Tab */}
@@ -402,6 +407,11 @@ const AdminDashboard = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Videos Tab */}
+          <TabsContent value="videos" className="space-y-4">
+            <VideoManagement />
           </TabsContent>
         </Tabs>
       </main>
