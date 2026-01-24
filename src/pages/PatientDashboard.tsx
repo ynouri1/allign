@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { ProgressRing } from '@/components/patient/ProgressRing';
 import { AlignerCard } from '@/components/patient/AlignerCard';
@@ -8,6 +8,7 @@ import { AnalysisProgressChart } from '@/components/patient/AnalysisProgressChar
 import { AnalysisHistory } from '@/components/patient/AnalysisHistory';
 import { StatsOverview } from '@/components/patient/StatsOverview';
 import { Timeline } from '@/components/patient/Timeline';
+import { RemindersPanel } from '@/components/patient/RemindersPanel';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,12 +18,11 @@ import { format, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { useAlignerAnalysis } from '@/hooks/useAlignerAnalysis';
-import { useMyPhotos, useSavePhoto, PatientPhotoRecord } from '@/hooks/usePatientPhotos';
+import { useMyPhotos, useSavePhoto } from '@/hooks/usePatientPhotos';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-
 // Hook pour récupérer les données du patient connecté
 function useMyPatientData() {
   const { user } = useAuth();
@@ -205,11 +205,25 @@ export default function PatientDashboard() {
             
             {/* Quick actions */}
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" className="h-auto py-3 flex-col gap-1">
+              <Button 
+                variant="outline" 
+                className="h-auto py-3 flex-col gap-1"
+                onClick={() => {
+                  const tabsList = document.querySelector('[value="reminders"]') as HTMLButtonElement;
+                  tabsList?.click();
+                }}
+              >
                 <Bell className="h-5 w-5" />
                 <span className="text-xs">Rappels</span>
               </Button>
-              <Button variant="outline" className="h-auto py-3 flex-col gap-1">
+              <Button 
+                variant="outline" 
+                className="h-auto py-3 flex-col gap-1"
+                onClick={() => {
+                  const tabsList = document.querySelector('[value="history"]') as HTMLButtonElement;
+                  tabsList?.click();
+                }}
+              >
                 <History className="h-5 w-5" />
                 <span className="text-xs">Historique</span>
               </Button>
@@ -222,10 +236,14 @@ export default function PatientDashboard() {
 
         {/* Tabs for different views */}
         <Tabs defaultValue="capture" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="capture" className="gap-2">
               <CameraIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Capture</span>
+            </TabsTrigger>
+            <TabsTrigger value="reminders" className="gap-2">
+              <Bell className="h-4 w-4" />
+              <span className="hidden sm:inline">Rappels</span>
             </TabsTrigger>
             <TabsTrigger value="progress" className="gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -267,6 +285,19 @@ export default function PatientDashboard() {
                 )}
               </div>
             </div>
+          </TabsContent>
+
+          {/* Reminders Tab */}
+          <TabsContent value="reminders" className="space-y-6">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" />
+              Mes rappels
+            </h2>
+            <RemindersPanel 
+              nextChangeDate={patientData.nextChangeDate}
+              lastPhotoDate={photos.length > 0 ? new Date(photos[0].created_at) : undefined}
+              currentAligner={patientData.currentAligner}
+            />
           </TabsContent>
 
           {/* Progress Tab */}
