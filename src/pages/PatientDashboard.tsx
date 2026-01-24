@@ -240,10 +240,6 @@ export default function PatientDashboard() {
               <CameraIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Capture</span>
             </TabsTrigger>
-            <TabsTrigger value="videos" className="gap-2">
-              <PlayCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Vidéos</span>
-            </TabsTrigger>
             <TabsTrigger value="reminders" className="gap-2">
               <Bell className="h-4 w-4" />
               <span className="hidden sm:inline">Rappels</span>
@@ -255,6 +251,10 @@ export default function PatientDashboard() {
             <TabsTrigger value="history" className="gap-2">
               <History className="h-4 w-4" />
               <span className="hidden sm:inline">Historique</span>
+            </TabsTrigger>
+            <TabsTrigger value="videos" className="gap-2">
+              <PlayCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Vidéos</span>
             </TabsTrigger>
           </TabsList>
 
