@@ -19,6 +19,7 @@ import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { useAlignerAnalysis } from '@/hooks/useAlignerAnalysis';
 import { useMyPhotos, useSavePhoto } from '@/hooks/usePatientPhotos';
+import { useConfirmAlignerChange } from '@/hooks/useAlignerChange';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,6 +78,7 @@ export default function PatientDashboard() {
   const { data: photosData, isLoading: isLoadingPhotos } = useMyPhotos();
   const { data: patientData, isLoading: isLoadingPatient } = useMyPatientData();
   const savePhoto = useSavePhoto();
+  const confirmChange = useConfirmAlignerChange();
   
   const [latestAnalysis, setLatestAnalysis] = useState<PhotoAnalysis | null>(null);
   const [activeTab, setActiveTab] = useState('capture');
@@ -293,6 +295,12 @@ export default function PatientDashboard() {
                 nextChangeDate={patientData.nextChangeDate}
                 lastPhotoDate={photos.length > 0 ? new Date(photos[0].created_at) : undefined}
                 currentAligner={patientData.currentAligner}
+                totalAligners={patientData.totalAligners}
+                onConfirmChange={() => confirmChange.mutate({ 
+                  patientId: patientData.id, 
+                  newAlignerNumber: patientData.currentAligner + 1 
+                })}
+                isConfirming={confirmChange.isPending}
               />
             ) : (
               <Card className="p-6 text-center glass-card">
