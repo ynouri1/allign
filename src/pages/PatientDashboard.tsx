@@ -48,13 +48,21 @@ function useMyPatientData() {
       
       if (!patient) return null;
       
+      const currentAligner = patient.current_aligner || 1;
+      const totalAligners = patient.total_aligners || 15;
+      const treatmentStart = patient.treatment_start ? new Date(patient.treatment_start) : new Date();
+      
+      // Calcul dynamique de la date du prochain changement basé sur treatment_start et current_aligner
+      // Chaque gouttière dure 14 jours, donc le prochain changement = début + (currentAligner * 14 jours)
+      const nextChangeDate = addDays(treatmentStart, currentAligner * 14);
+      
       return {
         id: patient.id,
         name: profile.full_name,
-        currentAligner: patient.current_aligner || 1,
-        totalAligners: patient.total_aligners || 15,
-        treatmentStart: patient.treatment_start ? new Date(patient.treatment_start) : new Date(),
-        nextChangeDate: patient.next_change_date ? new Date(patient.next_change_date) : addDays(new Date(), 14),
+        currentAligner,
+        totalAligners,
+        treatmentStart,
+        nextChangeDate,
         attachmentTeeth: (patient as any).attachment_teeth || [],
       };
     },
