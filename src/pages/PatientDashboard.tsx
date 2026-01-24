@@ -10,11 +10,12 @@ import { StatsOverview } from '@/components/patient/StatsOverview';
 import { Timeline } from '@/components/patient/Timeline';
 import { RemindersPanel } from '@/components/patient/RemindersPanel';
 import { PatientSchedule } from '@/components/patient/PatientSchedule';
+import { VideoTutorials } from '@/components/patient/VideoTutorials';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PhotoAnalysis, PhotoAngle } from '@/types/patient';
-import { ArrowLeft, Bell, History, Camera as CameraIcon, BarChart3, Loader2 } from 'lucide-react';
+import { ArrowLeft, Bell, History, Camera as CameraIcon, BarChart3, Loader2, PlayCircle } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -234,10 +235,14 @@ export default function PatientDashboard() {
 
         {/* Tabs for different views */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="capture" className="gap-2">
               <CameraIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Capture</span>
+            </TabsTrigger>
+            <TabsTrigger value="videos" className="gap-2">
+              <PlayCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Vidéos</span>
             </TabsTrigger>
             <TabsTrigger value="reminders" className="gap-2">
               <Bell className="h-4 w-4" />
@@ -283,6 +288,15 @@ export default function PatientDashboard() {
                 )}
               </div>
             </div>
+          </TabsContent>
+
+          {/* Videos Tab */}
+          <TabsContent value="videos" className="space-y-6">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <PlayCircle className="h-5 w-5 text-primary" />
+              Bonnes pratiques
+            </h2>
+            <VideoTutorials />
           </TabsContent>
 
           {/* Reminders Tab */}
