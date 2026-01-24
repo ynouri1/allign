@@ -331,14 +331,6 @@ export default function PatientDashboard() {
               <BarChart3 className="h-5 w-5 text-primary" />
               Ma progression
             </h2>
-            
-            {isLoadingPhotos ? (
-              <Card className="p-8 text-center">
-                <Loader2 className="h-8 w-8 mx-auto text-primary animate-spin" />
-              </Card>
-            ) : (
-              <AnalysisProgressChart photos={photos} />
-            )}
 
             {/* Timeline */}
             <Card className="p-6 glass-card">
@@ -353,6 +345,15 @@ export default function PatientDashboard() {
               currentAligner={patientData.currentAligner}
               totalAligners={patientData.totalAligners}
             />
+            
+            {/* Score global à la fin */}
+            {isLoadingPhotos ? (
+              <Card className="p-8 text-center">
+                <Loader2 className="h-8 w-8 mx-auto text-primary animate-spin" />
+              </Card>
+            ) : (
+              <AnalysisProgressChart photos={photos} />
+            )}
           </TabsContent>
 
           {/* History Tab */}
