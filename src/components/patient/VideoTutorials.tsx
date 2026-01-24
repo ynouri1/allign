@@ -1,8 +1,10 @@
-import { Play, Clock, CheckCircle2, X } from 'lucide-react';
+import { Play, Clock, CheckCircle2, X, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import insertionVideo from '@/assets/videos/aligner-insertion-tutorial.mp4';
 import removalVideo from '@/assets/videos/aligner-removal-tutorial.mp4';
 import cleaningVideo from '@/assets/videos/aligner-cleaning-tutorial.mp4';
@@ -18,12 +20,13 @@ interface Video {
   thumbnail: string;
   videoUrl: string;
   isLocalVideo?: boolean;
-  category: 'insertion' | 'retrait' | 'hygiene' | 'conseils';
+  category: string;
 }
 
-const educationalVideos: Video[] = [
+// Vidéos statiques par défaut (celles générées par IA)
+const defaultVideos: Video[] = [
   {
-    id: '1',
+    id: 'default-1',
     title: 'Comment bien insérer sa gouttière',
     description: 'Apprenez la technique correcte pour mettre vos aligneurs en place sans les abîmer.',
     duration: '0:05',
@@ -33,7 +36,7 @@ const educationalVideos: Video[] = [
     category: 'insertion',
   },
   {
-    id: '2',
+    id: 'default-2',
     title: 'Retirer ses aligneurs correctement',
     description: 'La bonne méthode pour enlever vos gouttières sans douleur ni dommage.',
     duration: '0:05',
@@ -43,7 +46,7 @@ const educationalVideos: Video[] = [
     category: 'retrait',
   },
   {
-    id: '3',
+    id: 'default-3',
     title: 'Nettoyage quotidien des gouttières',
     description: 'Gardez vos aligneurs propres et transparents avec ces conseils d\'hygiène.',
     duration: '0:05',
@@ -53,7 +56,7 @@ const educationalVideos: Video[] = [
     category: 'hygiene',
   },
   {
-    id: '4',
+    id: 'default-4',
     title: 'Port 22h/jour : astuces pratiques',
     description: 'Comment atteindre les 22 heures de port quotidien recommandées.',
     duration: '0:05',
@@ -63,7 +66,7 @@ const educationalVideos: Video[] = [
     category: 'conseils',
   },
   {
-    id: '5',
+    id: 'default-5',
     title: 'Gérer la douleur des premiers jours',
     description: 'Conseils pour soulager l\'inconfort lors du changement de gouttière.',
     duration: '0:05',
@@ -73,7 +76,7 @@ const educationalVideos: Video[] = [
     category: 'conseils',
   },
   {
-    id: '6',
+    id: 'default-6',
     title: 'Manger et boire avec des aligneurs',
     description: 'Ce qu\'il faut savoir sur l\'alimentation pendant votre traitement.',
     duration: '0:05',
@@ -84,7 +87,7 @@ const educationalVideos: Video[] = [
   },
 ];
 
-const categoryLabels = {
+const categoryLabels: Record<string, { label: string; color: string }> = {
   insertion: { label: 'Insertion', color: 'bg-blue-500' },
   retrait: { label: 'Retrait', color: 'bg-purple-500' },
   hygiene: { label: 'Hygiène', color: 'bg-green-500' },
@@ -94,6 +97,35 @@ const categoryLabels = {
 export function VideoTutorials() {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [watchedVideos, setWatchedVideos] = useState<string[]>([]);
+
+  // Récupérer les vidéos personnalisées depuis la base de données
+  const { data: dbVideos, isLoading } = useQuery({
+    queryKey: ['tutorial-videos'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tutorial_videos')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+      
+      if (error) throw error;
+      
+      return (data || []).map(v => ({
+        id: v.id,
+        title: v.title,
+        description: v.description || '',
+        duration: v.duration || '0:00',
+        thumbnail: v.thumbnail_url || 'https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=400&h=225&fit=crop',
+        videoUrl: v.video_url,
+        isLocalVideo: false, // Videos from storage are URLs
+        category: v.category,
+      })) as Video[];
+    },
+  });
+
+  // Combiner les vidéos par défaut et les vidéos de la DB
+  // Les vidéos de la DB apparaissent en premier si elles existent
+  const allVideos = [...(dbVideos || []), ...defaultVideos];
 
   const handleVideoClick = (video: Video) => {
     setSelectedVideo(video);
@@ -106,6 +138,14 @@ export function VideoTutorials() {
     setSelectedVideo(null);
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Progress indicator */}
@@ -114,17 +154,17 @@ export function VideoTutorials() {
           <div>
             <p className="font-medium">Votre progression</p>
             <p className="text-sm text-muted-foreground">
-              {watchedVideos.length} / {educationalVideos.length} vidéos vues
+              {watchedVideos.length} / {allVideos.length} vidéos vues
             </p>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
               <div 
                 className="h-full bg-primary transition-all duration-500"
-                style={{ width: `${(watchedVideos.length / educationalVideos.length) * 100}%` }}
+                style={{ width: `${(watchedVideos.length / allVideos.length) * 100}%` }}
               />
             </div>
-            {watchedVideos.length === educationalVideos.length && (
+            {watchedVideos.length === allVideos.length && allVideos.length > 0 && (
               <CheckCircle2 className="h-5 w-5 text-success" />
             )}
           </div>
@@ -152,12 +192,11 @@ export function VideoTutorials() {
                 className="w-full h-full object-contain"
               />
             ) : (
-              <iframe
+              <video
                 src={selectedVideo.videoUrl}
-                title={selectedVideo.title}
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
+                controls
+                autoPlay
+                className="w-full h-full object-contain"
               />
             )}
           </div>
@@ -167,9 +206,9 @@ export function VideoTutorials() {
 
       {/* Video grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {educationalVideos.map((video) => {
+        {allVideos.map((video) => {
           const isWatched = watchedVideos.includes(video.id);
-          const category = categoryLabels[video.category];
+          const category = categoryLabels[video.category] || { label: video.category, color: 'bg-gray-500' };
           
           return (
             <Card 
