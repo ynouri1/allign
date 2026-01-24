@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      aligner_changes: {
+        Row: {
+          confirmed_at: string
+          created_at: string
+          from_aligner: number
+          id: string
+          patient_id: string
+          to_aligner: number
+        }
+        Insert: {
+          confirmed_at?: string
+          created_at?: string
+          from_aligner: number
+          id?: string
+          patient_id: string
+          to_aligner: number
+        }
+        Update: {
+          confirmed_at?: string
+          created_at?: string
+          from_aligner?: number
+          id?: string
+          patient_id?: string
+          to_aligner?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aligner_changes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_photos: {
         Row: {
           aligner_number: number

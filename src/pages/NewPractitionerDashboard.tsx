@@ -9,12 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Users, Calendar, Mail, Phone, Loader2, User, BarChart3, Camera, Bell } from 'lucide-react';
-import { format, differenceInDays } from 'date-fns';
+import { ArrowLeft, Users, Calendar, Mail, Phone, Loader2, User, BarChart3, Bell } from 'lucide-react';
+import { differenceInDays, addDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { PatientPhotosView } from '@/components/practitioner/PatientPhotosView';
 import { AlertsPanelNew } from '@/components/practitioner/AlertsPanelNew';
 import { TeethViewer3D } from '@/components/practitioner/TeethViewer3D';
+import { PatientTreatmentInfo } from '@/components/practitioner/PatientTreatmentInfo';
 
 const NewPractitionerDashboard = () => {
   const navigate = useNavigate();
@@ -53,10 +54,11 @@ const NewPractitionerDashboard = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const getDaysUntilChange = (nextChangeDate: string | null) => {
-    if (!nextChangeDate) return null;
-    const days = differenceInDays(new Date(nextChangeDate), new Date());
-    return days;
+  const getDaysUntilChange = (patient: any) => {
+    // Calculate dynamically based on treatment_start and current_aligner
+    if (!patient.treatment_start) return null;
+    const nextChangeDate = addDays(new Date(patient.treatment_start), patient.current_aligner * 14);
+    return differenceInDays(nextChangeDate, new Date());
   };
 
   return (
@@ -139,7 +141,7 @@ const NewPractitionerDashboard = () => {
             ) : (
               <div className="space-y-2">
                 {patients?.map((patient) => {
-                  const daysUntilChange = getDaysUntilChange(patient.next_change_date);
+                  const daysUntilChange = getDaysUntilChange(patient);
                   
                   return (
                     <Card 
@@ -227,49 +229,13 @@ const NewPractitionerDashboard = () => {
                         )}
                       </div>
 
-                      {/* Treatment Info */}
-                      <div>
-                        <h3 className="font-semibold mb-3">Informations du traitement</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="p-3 rounded-lg bg-primary/5 text-center">
-                            <p className="text-2xl font-bold text-primary">{selectedPatient.current_aligner}</p>
-                            <p className="text-sm text-muted-foreground">Aligneur actuel</p>
-                          </div>
-                          <div className="p-3 rounded-lg bg-secondary/50 text-center">
-                            <p className="text-2xl font-bold">{selectedPatient.total_aligners}</p>
-                            <p className="text-sm text-muted-foreground">Total aligneurs</p>
-                          </div>
-                          <div className="p-3 rounded-lg bg-secondary/50 text-center">
-                            <p className="text-2xl font-bold">
-                              {selectedPatient.total_aligners > 0 
-                                ? Math.round((selectedPatient.current_aligner / selectedPatient.total_aligners) * 100)
-                                : 0}%
-                            </p>
-                            <p className="text-sm text-muted-foreground">Progression</p>
-                          </div>
-                          {selectedPatient.next_change_date && (
-                            <div className="p-3 rounded-lg bg-secondary/50 text-center">
-                              <p className="text-lg font-bold">
-                                {format(new Date(selectedPatient.next_change_date), 'dd MMM', { locale: fr })}
-                              </p>
-                              <p className="text-sm text-muted-foreground">Prochain changement</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Treatment Start */}
-                      {selectedPatient.treatment_start && (
-                        <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                          <Calendar className="h-5 w-5 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm text-muted-foreground">Début du traitement</p>
-                            <p className="font-medium">
-                              {format(new Date(selectedPatient.treatment_start), 'dd MMMM yyyy', { locale: fr })}
-                            </p>
-                          </div>
-                        </div>
-                      )}
+                      {/* Treatment Info with Aligner Change History */}
+                      <PatientTreatmentInfo 
+                        patientId={selectedPatient.id}
+                        treatmentStart={selectedPatient.treatment_start ? new Date(selectedPatient.treatment_start) : null}
+                        currentAligner={selectedPatient.current_aligner}
+                        totalAligners={selectedPatient.total_aligners}
+                      />
 
                       {/* Notes */}
                       {selectedPatient.notes && (
