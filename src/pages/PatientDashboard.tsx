@@ -293,11 +293,18 @@ export default function PatientDashboard() {
               <Bell className="h-5 w-5 text-primary" />
               Mes rappels
             </h2>
-            <RemindersPanel 
-              nextChangeDate={patientData.nextChangeDate}
-              lastPhotoDate={photos.length > 0 ? new Date(photos[0].created_at) : undefined}
-              currentAligner={patientData.currentAligner}
-            />
+            {patientData?.nextChangeDate ? (
+              <RemindersPanel 
+                nextChangeDate={patientData.nextChangeDate}
+                lastPhotoDate={photos.length > 0 ? new Date(photos[0].created_at) : undefined}
+                currentAligner={patientData.currentAligner}
+              />
+            ) : (
+              <Card className="p-6 text-center glass-card">
+                <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-muted-foreground">Chargement des rappels...</p>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Progress Tab */}
