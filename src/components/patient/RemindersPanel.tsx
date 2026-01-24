@@ -1,6 +1,7 @@
-import { Bell, Calendar, Camera, Clock, CheckCircle2 } from 'lucide-react';
+import { Bell, Calendar, Camera, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { differenceInDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -12,23 +13,35 @@ interface Reminder {
   message: string;
   date: Date;
   urgent: boolean;
+  actionable?: boolean;
 }
 
 interface RemindersPanelProps {
   nextChangeDate: Date;
   lastPhotoDate?: Date;
   currentAligner: number;
+  totalAligners: number;
+  onConfirmChange?: () => void;
+  isConfirming?: boolean;
 }
 
-export function RemindersPanel({ nextChangeDate, lastPhotoDate, currentAligner }: RemindersPanelProps) {
+export function RemindersPanel({ 
+  nextChangeDate, 
+  lastPhotoDate, 
+  currentAligner, 
+  totalAligners,
+  onConfirmChange,
+  isConfirming 
+}: RemindersPanelProps) {
   const today = new Date();
   const daysUntilChange = differenceInDays(nextChangeDate, today);
   const daysSincePhoto = lastPhotoDate ? differenceInDays(today, lastPhotoDate) : 999;
+  const canConfirmChange = daysUntilChange <= 0 && currentAligner < totalAligners;
 
   const reminders: Reminder[] = [];
 
   // Rappel de changement de gouttière
-  if (daysUntilChange <= 3) {
+  if (daysUntilChange <= 3 && currentAligner < totalAligners) {
     reminders.push({
       id: 'aligner-change',
       type: 'aligner_change',
@@ -39,7 +52,8 @@ export function RemindersPanel({ nextChangeDate, lastPhotoDate, currentAligner }
           ? `C'est aujourd'hui ! Passez à la gouttière #${currentAligner + 1}`
           : `Dans ${daysUntilChange} jour(s), passez à la gouttière #${currentAligner + 1}`,
       date: nextChangeDate,
-      urgent: daysUntilChange <= 1,
+      urgent: daysUntilChange <= 0,
+      actionable: canConfirmChange,
     });
   }
 
@@ -122,6 +136,25 @@ export function RemindersPanel({ nextChangeDate, lastPhotoDate, currentAligner }
                 <p className="text-xs text-muted-foreground mt-1">
                   {format(reminder.date, 'EEEE d MMMM', { locale: fr })}
                 </p>
+              )}
+              
+              {/* Bouton de confirmation du changement */}
+              {reminder.actionable && onConfirmChange && (
+                <Button 
+                  onClick={onConfirmChange}
+                  disabled={isConfirming}
+                  className="mt-3 w-full gradient-primary"
+                  size="sm"
+                >
+                  {isConfirming ? (
+                    'Confirmation...'
+                  ) : (
+                    <>
+                      Confirmer le passage à la gouttière #{currentAligner + 1}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
               )}
             </div>
           </div>
