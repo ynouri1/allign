@@ -2,24 +2,21 @@ import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { PatientPhotoRecord } from '@/hooks/usePatientPhotos';
 import { Camera, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { usePatientAlerts } from '@/hooks/usePatientAlerts';
 
 interface StatsOverviewProps {
   photos: PatientPhotoRecord[];
 }
 
 export function StatsOverview({ photos }: StatsOverviewProps) {
+  const { data: alertsData } = usePatientAlerts();
+  
   const stats = useMemo(() => {
     const analyzed = photos.filter(p => p.analysis_status === 'analyzed');
     
     const avgScore = analyzed.length > 0
       ? Math.round(analyzed.reduce((sum, p) => sum + (p.overall_score || 0), 0) / analyzed.length)
       : null;
-
-    const issues = analyzed.filter(p => 
-      p.attachment_status === 'missing' ||
-      p.insertion_quality === 'poor' ||
-      p.gingival_health === 'inflammation'
-    ).length;
 
     const healthy = analyzed.filter(p =>
       p.attachment_status === 'ok' &&
@@ -31,10 +28,12 @@ export function StatsOverview({ photos }: StatsOverviewProps) {
       totalPhotos: photos.length,
       analyzedPhotos: analyzed.length,
       avgScore,
-      issuesCount: issues,
       healthyCount: healthy,
     };
   }, [photos]);
+
+  // Use unresolved alerts count from practitioner_alerts
+  const unresolvedAlerts = alertsData?.unresolvedCount || 0;
 
   const statCards = [
     {
@@ -60,10 +59,10 @@ export function StatsOverview({ photos }: StatsOverviewProps) {
     },
     {
       label: 'Alertes',
-      value: stats.issuesCount,
+      value: unresolvedAlerts,
       icon: AlertTriangle,
-      color: stats.issuesCount > 0 ? 'text-warning' : 'text-muted-foreground',
-      bgColor: stats.issuesCount > 0 ? 'bg-warning/10' : 'bg-muted',
+      color: unresolvedAlerts > 0 ? 'text-warning' : 'text-muted-foreground',
+      bgColor: unresolvedAlerts > 0 ? 'bg-warning/10' : 'bg-muted',
     },
   ];
 
