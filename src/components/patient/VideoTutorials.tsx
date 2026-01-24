@@ -1,8 +1,9 @@
-import { Play, Clock, CheckCircle2 } from 'lucide-react';
+import { Play, Clock, CheckCircle2, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import insertionVideo from '@/assets/videos/aligner-insertion-tutorial.mp4';
 
 interface Video {
   id: string;
@@ -11,6 +12,7 @@ interface Video {
   duration: string;
   thumbnail: string;
   videoUrl: string;
+  isLocalVideo?: boolean;
   category: 'insertion' | 'retrait' | 'hygiene' | 'conseils';
 }
 
@@ -19,9 +21,10 @@ const educationalVideos: Video[] = [
     id: '1',
     title: 'Comment bien insérer sa gouttière',
     description: 'Apprenez la technique correcte pour mettre vos aligneurs en place sans les abîmer.',
-    duration: '1:30',
+    duration: '0:05',
     thumbnail: 'https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=400&h=225&fit=crop',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: insertionVideo,
+    isLocalVideo: true,
     category: 'insertion',
   },
   {
@@ -125,19 +128,28 @@ export function VideoTutorials() {
             <h3 className="font-semibold">{selectedVideo.title}</h3>
             <button 
               onClick={handleCloseVideo}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="p-1 rounded-full hover:bg-muted transition-colors"
             >
-              ✕
+              <X className="h-5 w-5" />
             </button>
           </div>
           <div className="aspect-video rounded-lg overflow-hidden bg-black">
-            <iframe
-              src={selectedVideo.videoUrl}
-              title={selectedVideo.title}
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+            {selectedVideo.isLocalVideo ? (
+              <video
+                src={selectedVideo.videoUrl}
+                controls
+                autoPlay
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <iframe
+                src={selectedVideo.videoUrl}
+                title={selectedVideo.title}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            )}
           </div>
           <p className="mt-3 text-sm text-muted-foreground">{selectedVideo.description}</p>
         </Card>
