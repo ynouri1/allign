@@ -28,7 +28,21 @@ const NewPractitionerDashboard = () => {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const selectedPatient = patients?.find(p => p.id === selectedPatientId);
   
-  const unresolvedAlertCount = alerts.filter(a => !a.resolved).length;
+  const unresolvedAlerts = alerts.filter(a => !a.resolved);
+  const unresolvedAlertCount = unresolvedAlerts.length;
+
+  // Group unresolved alerts by patient for badge display
+  const alertsByPatient = unresolvedAlerts.reduce((acc, alert) => {
+    const patientId = alert.patient_id;
+    if (!acc[patientId]) {
+      acc[patientId] = { total: 0, high: 0 };
+    }
+    acc[patientId].total++;
+    if (alert.severity === 'high') {
+      acc[patientId].high++;
+    }
+    return acc;
+  }, {} as Record<string, { total: number; high: number }>);
 
   if (loading) {
     return (
@@ -148,7 +162,7 @@ const NewPractitionerDashboard = () => {
                       key={patient.id}
                       className={`glass-card cursor-pointer transition-all hover:shadow-md ${
                         selectedPatientId === patient.id ? 'ring-2 ring-primary' : ''
-                      }`}
+                      } ${alertsByPatient[patient.id]?.high > 0 ? 'border-l-4 border-l-destructive' : ''}`}
                       onClick={() => setSelectedPatientId(patient.id)}
                     >
                       <CardContent className="p-4">
@@ -159,7 +173,19 @@ const NewPractitionerDashboard = () => {
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{patient.profile.full_name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium truncate">{patient.profile.full_name}</p>
+                              {alertsByPatient[patient.id]?.high > 0 && (
+                                <Badge className="bg-destructive text-destructive-foreground text-xs">
+                                  {alertsByPatient[patient.id].high} urgent
+                                </Badge>
+                              )}
+                              {alertsByPatient[patient.id]?.total > 0 && alertsByPatient[patient.id]?.high === 0 && (
+                                <Badge className="bg-warning text-warning-foreground text-xs">
+                                  {alertsByPatient[patient.id].total} alerte{alertsByPatient[patient.id].total > 1 ? 's' : ''}
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-sm text-muted-foreground">
                               Aligneur {patient.current_aligner}/{patient.total_aligners}
                             </p>
