@@ -4,6 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import insertionVideo from '@/assets/videos/aligner-insertion-tutorial.mp4';
+import removalVideo from '@/assets/videos/aligner-removal-tutorial.mp4';
+import cleaningVideo from '@/assets/videos/aligner-cleaning-tutorial.mp4';
+import dailyWearVideo from '@/assets/videos/aligner-daily-wear-tips.mp4';
+import painReliefVideo from '@/assets/videos/aligner-pain-relief.mp4';
+import eatingDrinkingVideo from '@/assets/videos/aligner-eating-drinking.mp4';
 
 interface Video {
   id: string;
@@ -31,45 +36,50 @@ const educationalVideos: Video[] = [
     id: '2',
     title: 'Retirer ses aligneurs correctement',
     description: 'La bonne méthode pour enlever vos gouttières sans douleur ni dommage.',
-    duration: '1:15',
+    duration: '0:05',
     thumbnail: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=400&h=225&fit=crop',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: removalVideo,
+    isLocalVideo: true,
     category: 'retrait',
   },
   {
     id: '3',
     title: 'Nettoyage quotidien des gouttières',
     description: 'Gardez vos aligneurs propres et transparents avec ces conseils d\'hygiène.',
-    duration: '2:00',
+    duration: '0:05',
     thumbnail: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=225&fit=crop',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: cleaningVideo,
+    isLocalVideo: true,
     category: 'hygiene',
   },
   {
     id: '4',
     title: 'Port 22h/jour : astuces pratiques',
     description: 'Comment atteindre les 22 heures de port quotidien recommandées.',
-    duration: '2:30',
+    duration: '0:05',
     thumbnail: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=400&h=225&fit=crop',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: dailyWearVideo,
+    isLocalVideo: true,
     category: 'conseils',
   },
   {
     id: '5',
     title: 'Gérer la douleur des premiers jours',
     description: 'Conseils pour soulager l\'inconfort lors du changement de gouttière.',
-    duration: '1:45',
+    duration: '0:05',
     thumbnail: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=225&fit=crop',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: painReliefVideo,
+    isLocalVideo: true,
     category: 'conseils',
   },
   {
     id: '6',
     title: 'Manger et boire avec des aligneurs',
     description: 'Ce qu\'il faut savoir sur l\'alimentation pendant votre traitement.',
-    duration: '1:50',
+    duration: '0:05',
     thumbnail: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=225&fit=crop',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: eatingDrinkingVideo,
+    isLocalVideo: true,
     category: 'conseils',
   },
 ];
