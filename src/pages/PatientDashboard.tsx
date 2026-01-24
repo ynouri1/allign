@@ -9,6 +9,7 @@ import { AnalysisHistory } from '@/components/patient/AnalysisHistory';
 import { StatsOverview } from '@/components/patient/StatsOverview';
 import { Timeline } from '@/components/patient/Timeline';
 import { RemindersPanel } from '@/components/patient/RemindersPanel';
+import { PatientSchedule } from '@/components/patient/PatientSchedule';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -327,9 +328,17 @@ export default function PatientDashboard() {
 
             {/* Timeline */}
             <Card className="p-6 glass-card">
-              <h3 className="font-semibold mb-4">Planning des gouttières</h3>
+              <h3 className="font-semibold mb-4">Aperçu rapide</h3>
               <Timeline schedule={schedule} />
             </Card>
+
+            {/* Full Schedule with history */}
+            <PatientSchedule
+              patientId={patientData.id}
+              treatmentStart={patientData.treatmentStart}
+              currentAligner={patientData.currentAligner}
+              totalAligners={patientData.totalAligners}
+            />
           </TabsContent>
 
           {/* History Tab */}
