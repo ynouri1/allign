@@ -79,7 +79,8 @@ export default function PatientDashboard() {
   const savePhoto = useSavePhoto();
   
   const [latestAnalysis, setLatestAnalysis] = useState<PhotoAnalysis | null>(null);
-
+  const [activeTab, setActiveTab] = useState('capture');
+  
   const photos = photosData?.photos || [];
   const patientId = photosData?.patientId;
   
@@ -208,10 +209,7 @@ export default function PatientDashboard() {
               <Button 
                 variant="outline" 
                 className="h-auto py-3 flex-col gap-1"
-                onClick={() => {
-                  const tabsList = document.querySelector('[value="reminders"]') as HTMLButtonElement;
-                  tabsList?.click();
-                }}
+                onClick={() => setActiveTab('reminders')}
               >
                 <Bell className="h-5 w-5" />
                 <span className="text-xs">Rappels</span>
@@ -219,10 +217,7 @@ export default function PatientDashboard() {
               <Button 
                 variant="outline" 
                 className="h-auto py-3 flex-col gap-1"
-                onClick={() => {
-                  const tabsList = document.querySelector('[value="history"]') as HTMLButtonElement;
-                  tabsList?.click();
-                }}
+                onClick={() => setActiveTab('history')}
               >
                 <History className="h-5 w-5" />
                 <span className="text-xs">Historique</span>
@@ -235,7 +230,7 @@ export default function PatientDashboard() {
         {photos.length > 0 && <StatsOverview photos={photos} />}
 
         {/* Tabs for different views */}
-        <Tabs defaultValue="capture" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="capture" className="gap-2">
               <CameraIcon className="h-4 w-4" />
