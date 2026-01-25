@@ -148,29 +148,6 @@ export function VideoTutorials() {
 
   return (
     <div className="space-y-4">
-      {/* Progress indicator */}
-      <Card className="p-4 glass-card">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-medium">Votre progression</p>
-            <p className="text-sm text-muted-foreground">
-              {watchedVideos.length} / {allVideos.length} vidéos vues
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all duration-500"
-                style={{ width: `${(watchedVideos.length / allVideos.length) * 100}%` }}
-              />
-            </div>
-            {watchedVideos.length === allVideos.length && allVideos.length > 0 && (
-              <CheckCircle2 className="h-5 w-5 text-success" />
-            )}
-          </div>
-        </div>
-      </Card>
-
       {/* Video player modal */}
       {selectedVideo && (
         <Card className="p-4 glass-card">

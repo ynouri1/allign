@@ -254,7 +254,7 @@ export default function PatientDashboard() {
             </TabsTrigger>
             <TabsTrigger value="videos" className="gap-2">
               <PlayCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Vidéos</span>
+              <span className="hidden sm:inline">Bonnes pratiques</span>
             </TabsTrigger>
           </TabsList>
 
