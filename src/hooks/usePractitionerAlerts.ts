@@ -42,19 +42,33 @@ export interface PractitionerAlert {
 // Helper function to extract file path from URL and get signed URL
 async function getSignedUrl(photoUrl: string): Promise<string> {
   try {
+    // If it's already a signed URL (contains 'token='), return as is
+    if (photoUrl.includes('token=')) {
+      return photoUrl;
+    }
+    
     // Extract the file path from the URL
     // URL format: https://xxx.supabase.co/storage/v1/object/public/aligner-photos/patient-id/filename.jpg
     const match = photoUrl.match(/aligner-photos\/(.+)$/);
-    if (!match) return photoUrl;
+    if (!match) {
+      console.warn('Could not extract file path from photo URL:', photoUrl);
+      return photoUrl;
+    }
     
     const filePath = match[1];
     
     const { data, error } = await supabase.storage
       .from('aligner-photos')
-      .createSignedUrl(filePath, 3600); // 1 hour expiry
+      .createSignedUrl(filePath, 7200); // 2 hours expiry for better reliability
     
-    if (error || !data) {
+    if (error) {
       console.error('Error creating signed URL:', error);
+      // Return the original URL as fallback
+      return photoUrl;
+    }
+    
+    if (!data?.signedUrl) {
+      console.warn('No signed URL returned');
       return photoUrl;
     }
     
