@@ -91,10 +91,10 @@ Analyse l'image fournie avec une attention MAXIMALE sur les dents indiquées ci-
    - Espace/gap entre le plastique et la surface dentaire
    - Gouttière qui semble "flotter" ou ne pas adhérer
 
-3. **Santé gingivale**: État des gencives visibles
-   - "healthy": Gencives uniformément roses, aucune rougeur, aucun gonflement
-   - "mild_inflammation": TOUTE rougeur localisée, même légère, ou gonflement minimal
-   - "inflammation": Rougeur marquée, gonflement évident, saignement apparent
+3. **Santé gingivale**: État des gencives visibles (ÉVALUATION MODÉRÉE)
+   - "healthy": Gencives roses à légèrement rosées, variations de couleur mineures acceptables, pas de gonflement visible
+   - "mild_inflammation": Rougeur CLAIREMENT visible et localisée (pas juste une légère variation de teinte), OU gonflement léger mais distinct
+   - "inflammation": Rougeur marquée étendue, gonflement évident, saignement apparent
 
 4. **Score global**: Score CONSERVATEUR de 0 à 100. En cas de TOUT problème détecté:
    - Problème d'insertion = score max 60
