@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
@@ -17,7 +18,8 @@ import {
   User,
   Calendar,
   Clock,
-  MessageSquare
+  MessageSquare,
+  ImageOff
 } from 'lucide-react';
 import { PractitionerAlert } from '@/hooks/usePractitionerAlerts';
 import { cn } from '@/lib/utils';
@@ -38,6 +40,16 @@ export function AlertDetailDialog({
   isResolving 
 }: AlertDetailDialogProps) {
   const [resolutionNotes, setResolutionNotes] = useState('');
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+
+  // Reset states when alert changes
+  useEffect(() => {
+    if (alert) {
+      setImageError(false);
+      setImageLoading(true);
+    }
+  }, [alert?.id]);
 
   if (!alert) return null;
 
@@ -152,7 +164,11 @@ export function AlertDetailDialog({
             <div>
               <h3 className="font-semibold mb-2">Description de l'alerte</h3>
               <Card className="p-4 bg-muted/50">
-                <p className="text-foreground">{alert.message}</p>
+                {alert.message ? (
+                  <p className="text-foreground">{alert.message}</p>
+                ) : (
+                  <p className="text-muted-foreground italic">Aucune description disponible</p>
+                )}
               </Card>
             </div>
 
@@ -165,12 +181,31 @@ export function AlertDetailDialog({
                 </h3>
                 
                 {/* Photo */}
-                <div className="aspect-[4/3] rounded-xl overflow-hidden bg-muted mb-4">
-                  <img
-                    src={alert.photo.photo_url}
-                    alt="Photo du patient"
-                    className="w-full h-full object-cover"
-                  />
+                <div className="aspect-[4/3] rounded-xl overflow-hidden bg-muted mb-4 relative">
+                  {imageLoading && !imageError && (
+                    <Skeleton className="absolute inset-0 w-full h-full" />
+                  )}
+                  {imageError ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted text-muted-foreground">
+                      <ImageOff className="h-12 w-12 mb-2" />
+                      <p className="text-sm">Photo non disponible</p>
+                      <p className="text-xs">Le lien a peut-être expiré</p>
+                    </div>
+                  ) : (
+                    <img
+                      src={alert.photo.photo_url}
+                      alt="Photo du patient"
+                      className={cn(
+                        "w-full h-full object-cover transition-opacity",
+                        imageLoading ? "opacity-0" : "opacity-100"
+                      )}
+                      onLoad={() => setImageLoading(false)}
+                      onError={() => {
+                        setImageLoading(false);
+                        setImageError(true);
+                      }}
+                    />
+                  )}
                 </div>
 
                 {/* Photo metadata */}
