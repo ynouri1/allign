@@ -180,13 +180,13 @@ export function AlertDetailDialog({
                   Photo du patient
                 </h3>
                 
-                {/* Photo - Centered and contained */}
-                <div className="flex items-center justify-center bg-muted/50 rounded-xl p-4 mb-4 min-h-[300px] max-h-[400px] relative">
+                {/* Photo - Full width, high quality display */}
+                <div className="flex items-center justify-center bg-black rounded-xl overflow-hidden mb-4 relative">
                   {imageLoading && !imageError && (
-                    <Skeleton className="absolute inset-4 rounded-lg" />
+                    <Skeleton className="absolute inset-0 w-full h-full" />
                   )}
                   {imageError ? (
-                    <div className="flex flex-col items-center justify-center text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center text-muted-foreground py-16">
                       <ImageOff className="h-12 w-12 mb-2" />
                       <p className="text-sm">Photo non disponible</p>
                       <p className="text-xs">Le lien a peut-être expiré</p>
@@ -196,7 +196,7 @@ export function AlertDetailDialog({
                       src={alert.photo.photo_url}
                       alt="Photo du patient"
                       className={cn(
-                        "max-w-full max-h-[360px] w-auto h-auto object-contain rounded-lg shadow-md transition-opacity",
+                        "w-full h-auto max-h-[500px] object-contain transition-opacity",
                         imageLoading ? "opacity-0" : "opacity-100"
                       )}
                       onLoad={() => setImageLoading(false)}
