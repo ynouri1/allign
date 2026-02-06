@@ -139,20 +139,36 @@ export function usePractitionerAlerts() {
         throw error;
       }
 
-      // Generate signed URLs for photos
+      // Normalize photo data (may come as array from PostgREST) and generate signed URLs
       const alertsWithSignedUrls = await Promise.all(
-        (data as PractitionerAlert[]).map(async (alert) => {
-          if (alert.photo?.photo_url) {
-            const signedUrl = await getSignedUrl(alert.photo.photo_url);
+        (data as any[]).map(async (alert) => {
+          // Normalize: photo might be an array or object depending on PostgREST
+          let photo = alert.photo;
+          if (Array.isArray(photo)) {
+            photo = photo.length > 0 ? photo[0] : null;
+          }
+          // Also normalize patient
+          let patient = alert.patient;
+          if (Array.isArray(patient)) {
+            patient = patient.length > 0 ? patient[0] : null;
+          }
+          if (patient && Array.isArray(patient.profile)) {
+            patient = { ...patient, profile: patient.profile[0] || null };
+          }
+          
+          const normalizedAlert = { ...alert, photo, patient };
+
+          if (normalizedAlert.photo?.photo_url) {
+            const signedUrl = await getSignedUrl(normalizedAlert.photo.photo_url);
             return {
-              ...alert,
+              ...normalizedAlert,
               photo: {
-                ...alert.photo,
+                ...normalizedAlert.photo,
                 photo_url: signedUrl,
               },
             };
           }
-          return alert;
+          return normalizedAlert;
         })
       );
 
