@@ -405,6 +405,38 @@ export type Database = {
         }
         Relationships: []
       }
+      wear_time_sessions: {
+        Row: {
+          id: string
+          patient_id: string
+          started_at: string
+          ended_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          started_at?: string
+          ended_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          started_at?: string
+          ended_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wear_time_sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

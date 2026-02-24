@@ -2,18 +2,25 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { usePatients, usePractitioners, useAssignPatient } from '@/hooks/useAdminData';
-import { Loader2, Link2 } from 'lucide-react';
+import { Loader2, Link2, ChevronsUpDown, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function AssignPatientDialog() {
   const [open, setOpen] = useState(false);
   const [practitionerId, setPractitionerId] = useState('');
   const [patientId, setPatientId] = useState('');
+  const [pracOpen, setPracOpen] = useState(false);
+  const [patOpen, setPatOpen] = useState(false);
 
   const { data: patients } = usePatients();
   const { data: practitioners } = usePractitioners();
   const assignPatient = useAssignPatient();
+
+  const selectedPractitioner = practitioners?.find((p) => p.id === practitionerId);
+  const selectedPatient = patients?.find((p) => p.id === patientId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,33 +50,75 @@ export function AssignPatientDialog() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Praticien *</Label>
-            <Select value={practitionerId} onValueChange={setPractitionerId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner un praticien" />
-              </SelectTrigger>
-              <SelectContent>
-                {practitioners?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.profile.full_name} {p.specialty && `(${p.specialty})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={pracOpen} onOpenChange={setPracOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={pracOpen} className="w-full justify-between font-normal">
+                  {selectedPractitioner
+                    ? `${selectedPractitioner.profile.full_name}${selectedPractitioner.specialty ? ` (${selectedPractitioner.specialty})` : ''}`
+                    : 'Sélectionner un praticien'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Rechercher un praticien…" />
+                  <CommandList>
+                    <CommandEmpty>Aucun praticien trouvé</CommandEmpty>
+                    <CommandGroup>
+                      {practitioners?.map((p) => (
+                        <CommandItem
+                          key={p.id}
+                          value={p.profile.full_name || ''}
+                          onSelect={() => {
+                            setPractitionerId(p.id === practitionerId ? '' : p.id);
+                            setPracOpen(false);
+                          }}
+                        >
+                          <Check className={cn('mr-2 h-4 w-4', practitionerId === p.id ? 'opacity-100' : 'opacity-0')} />
+                          {p.profile.full_name} {p.specialty && `(${p.specialty})`}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-2">
             <Label>Patient *</Label>
-            <Select value={patientId} onValueChange={setPatientId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner un patient" />
-              </SelectTrigger>
-              <SelectContent>
-                {patients?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.profile.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={patOpen} onOpenChange={setPatOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={patOpen} className="w-full justify-between font-normal">
+                  {selectedPatient
+                    ? selectedPatient.profile.full_name
+                    : 'Sélectionner un patient'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Rechercher un patient…" />
+                  <CommandList>
+                    <CommandEmpty>Aucun patient trouvé</CommandEmpty>
+                    <CommandGroup>
+                      {patients?.map((p) => (
+                        <CommandItem
+                          key={p.id}
+                          value={p.profile.full_name || ''}
+                          onSelect={() => {
+                            setPatientId(p.id === patientId ? '' : p.id);
+                            setPatOpen(false);
+                          }}
+                        >
+                          <Check className={cn('mr-2 h-4 w-4', patientId === p.id ? 'opacity-100' : 'opacity-0')} />
+                          {p.profile.full_name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

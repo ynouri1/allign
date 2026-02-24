@@ -15,7 +15,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PhotoAnalysis, PhotoAngle } from '@/types/patient';
-import { ArrowLeft, Bell, History, Camera as CameraIcon, BarChart3, Loader2, PlayCircle } from 'lucide-react';
+import { ArrowLeft, Bell, History, Camera as CameraIcon, BarChart3, Loader2, PlayCircle, Timer } from 'lucide-react';
+import { WearTimeTracker } from '@/components/patient/WearTimeTracker';
 import { format, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +25,7 @@ import { useMyPhotos, useSavePhoto } from '@/hooks/usePatientPhotos';
 import { useConfirmAlignerChange } from '@/hooks/useAlignerChange';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePatientAlerts } from '@/hooks/usePatientAlerts';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 // Hook pour récupérer les données du patient connecté
@@ -79,6 +81,7 @@ export default function PatientDashboard() {
   const { analyzePhoto, isAnalyzing } = useAlignerAnalysis();
   const { data: photosData, isLoading: isLoadingPhotos } = useMyPhotos();
   const { data: patientData, isLoading: isLoadingPatient } = useMyPatientData();
+  const { data: alertsData } = usePatientAlerts();
   const savePhoto = useSavePhoto();
   const confirmChange = useConfirmAlignerChange();
   
@@ -86,7 +89,7 @@ export default function PatientDashboard() {
   const [activeTab, setActiveTab] = useState('capture');
   
   const photos = photosData?.photos || [];
-  const patientId = photosData?.patientId;
+  const patientId = patientData?.id ?? photosData?.patientId;
   
   // Générer le planning des gouttières
   const generateSchedule = () => {
@@ -173,7 +176,7 @@ export default function PatientDashboard() {
       <Header 
         userType="patient" 
         userName={patientData.name}
-        alertCount={0}
+        alertCount={alertsData?.unresolvedCount ?? 0}
         onLogout={() => signOut()}
       />
       
@@ -231,14 +234,18 @@ export default function PatientDashboard() {
         </div>
 
         {/* Stats Overview */}
-        {photos.length > 0 && <StatsOverview photos={photos} />}
+        {photos.length > 0 && <StatsOverview photos={photos} patientId={patientId} />}
 
         {/* Tabs for different views */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="capture" className="gap-2">
               <CameraIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Capture</span>
+            </TabsTrigger>
+            <TabsTrigger value="wear" className="gap-2">
+              <Timer className="h-4 w-4" />
+              <span className="hidden sm:inline">Chrono</span>
             </TabsTrigger>
             <TabsTrigger value="reminders" className="gap-2">
               <Bell className="h-4 w-4" />
@@ -257,6 +264,15 @@ export default function PatientDashboard() {
               <span className="hidden sm:inline">Bonnes pratiques</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Wear Time Tab */}
+          <TabsContent value="wear" className="space-y-6">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Timer className="h-5 w-5 text-primary" />
+              Temps de port quotidien
+            </h2>
+            <WearTimeTracker patientId={patientId} />
+          </TabsContent>
 
           {/* Capture Tab */}
           <TabsContent value="capture" className="space-y-6">
@@ -309,6 +325,7 @@ export default function PatientDashboard() {
               <RemindersPanel 
                 nextChangeDate={patientData.nextChangeDate}
                 lastPhotoDate={photos.length > 0 ? new Date(photos[0].created_at) : undefined}
+                treatmentStartDate={patientData.treatmentStart}
                 currentAligner={patientData.currentAligner}
                 totalAligners={patientData.totalAligners}
                 onConfirmChange={() => confirmChange.mutate({ 

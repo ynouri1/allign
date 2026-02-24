@@ -24,7 +24,8 @@ import { EditPatientDialog } from '@/components/admin/EditPatientDialog';
 import { EditPractitionerDialog } from '@/components/admin/EditPractitionerDialog';
 import { DeleteConfirmDialog } from '@/components/admin/DeleteConfirmDialog';
 import { VideoManagement } from '@/components/admin/VideoManagement';
-import { ArrowLeft, Users, Stethoscope, Link2, Loader2, Trash2, Mail, Phone, Calendar, Pencil, Video } from 'lucide-react';
+import { ArrowLeft, Users, Stethoscope, Link2, Loader2, Trash2, Mail, Phone, Calendar, Pencil, Video, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -50,6 +51,28 @@ const AdminDashboard = () => {
   const [patientToDelete, setPatientToDelete] = useState<PatientWithProfile | null>(null);
   const [deletePractitionerOpen, setDeletePractitionerOpen] = useState(false);
   const [practitionerToDelete, setPractitionerToDelete] = useState<PractitionerWithProfile | null>(null);
+
+  // Search state
+  const [patientSearch, setPatientSearch] = useState('');
+  const [practitionerSearch, setPractitionerSearch] = useState('');
+  const [assignPractitionerSearch, setAssignPractitionerSearch] = useState('');
+  const [assignPatientSearch, setAssignPatientSearch] = useState('');
+
+  const filteredPatients = patients?.filter((p) =>
+    p.profile.full_name?.toLowerCase().includes(patientSearch.toLowerCase().trim())
+  );
+
+  const filteredPractitioners = practitioners?.filter((p) =>
+    p.profile.full_name?.toLowerCase().includes(practitionerSearch.toLowerCase().trim())
+  );
+
+  const filteredAssignments = assignments?.filter((a) => {
+    const prac = a.practitioner?.profile?.full_name?.toLowerCase() || '';
+    const pat = a.patient?.profile?.full_name?.toLowerCase() || '';
+    const sp = assignPractitionerSearch.toLowerCase().trim();
+    const spt = assignPatientSearch.toLowerCase().trim();
+    return (!sp || prac.includes(sp)) && (!spt || pat.includes(spt));
+  });
 
   const handleEditPatient = (patient: PatientWithProfile) => {
     setEditingPatient(patient);
@@ -191,21 +214,28 @@ const AdminDashboard = () => {
               <h2 className="text-lg font-semibold">Liste des patients</h2>
               <CreatePatientDialog />
             </div>
+
             <Card className="glass-card">
               <CardContent className="p-0">
                 {loadingPatients ? (
                   <div className="flex justify-center p-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
-                ) : patients?.length === 0 ? (
-                  <div className="text-center p-8 text-muted-foreground">
-                    Aucun patient enregistré
-                  </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Nom</TableHead>
+                        <TableHead className="min-w-[180px]">
+                          <div className="relative">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                            <Input
+                              placeholder="Nom"
+                              value={patientSearch}
+                              onChange={(e) => setPatientSearch(e.target.value)}
+                              className="h-8 pl-7 text-sm font-normal"
+                            />
+                          </div>
+                        </TableHead>
                         <TableHead>Contact</TableHead>
                         <TableHead>Traitement</TableHead>
                         <TableHead>Progrès</TableHead>
@@ -213,7 +243,13 @@ const AdminDashboard = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {patients?.map((patient) => (
+                      {filteredPatients?.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            {patientSearch ? 'Aucun patient trouvé' : 'Aucun patient enregistré'}
+                          </TableCell>
+                        </TableRow>
+                      ) : filteredPatients?.map((patient) => (
                         <TableRow key={patient.id}>
                           <TableCell className="font-medium">
                             {patient.profile.full_name}
@@ -284,15 +320,21 @@ const AdminDashboard = () => {
                   <div className="flex justify-center p-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
-                ) : practitioners?.length === 0 ? (
-                  <div className="text-center p-8 text-muted-foreground">
-                    Aucun praticien enregistré
-                  </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Nom</TableHead>
+                        <TableHead className="min-w-[180px]">
+                          <div className="relative">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                            <Input
+                              placeholder="Nom"
+                              value={practitionerSearch}
+                              onChange={(e) => setPractitionerSearch(e.target.value)}
+                              className="h-8 pl-7 text-sm font-normal"
+                            />
+                          </div>
+                        </TableHead>
                         <TableHead>Contact</TableHead>
                         <TableHead>Spécialité</TableHead>
                         <TableHead>N° Licence</TableHead>
@@ -300,7 +342,13 @@ const AdminDashboard = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {practitioners?.map((practitioner) => (
+                      {filteredPractitioners?.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            {practitionerSearch ? 'Aucun praticien trouvé' : 'Aucun praticien enregistré'}
+                          </TableCell>
+                        </TableRow>
+                      ) : filteredPractitioners?.map((practitioner) => (
                         <TableRow key={practitioner.id}>
                           <TableCell className="font-medium">
                             {practitioner.profile.full_name}
@@ -364,22 +412,44 @@ const AdminDashboard = () => {
                   <div className="flex justify-center p-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
-                ) : assignments?.length === 0 ? (
-                  <div className="text-center p-8 text-muted-foreground">
-                    Aucune assignation
-                  </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Praticien</TableHead>
-                        <TableHead>Patient</TableHead>
+                        <TableHead className="min-w-[180px]">
+                          <div className="relative">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                            <Input
+                              placeholder="Praticien"
+                              value={assignPractitionerSearch}
+                              onChange={(e) => setAssignPractitionerSearch(e.target.value)}
+                              className="h-8 pl-7 text-sm font-normal"
+                            />
+                          </div>
+                        </TableHead>
+                        <TableHead className="min-w-[180px]">
+                          <div className="relative">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                            <Input
+                              placeholder="Patient"
+                              value={assignPatientSearch}
+                              onChange={(e) => setAssignPatientSearch(e.target.value)}
+                              className="h-8 pl-7 text-sm font-normal"
+                            />
+                          </div>
+                        </TableHead>
                         <TableHead>Date d'assignation</TableHead>
                         <TableHead className="w-20">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {assignments?.map((assignment) => (
+                      {filteredAssignments?.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            {(assignPractitionerSearch || assignPatientSearch) ? 'Aucune assignation trouvée' : 'Aucune assignation'}
+                          </TableCell>
+                        </TableRow>
+                      ) : filteredAssignments?.map((assignment) => (
                         <TableRow key={assignment.id}>
                           <TableCell className="font-medium">
                             {assignment.practitioner?.profile?.full_name || 'N/A'}

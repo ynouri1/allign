@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Users, Calendar, Mail, Phone, Loader2, User, BarChart3, Bell } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, Users, Calendar, Mail, Phone, Loader2, User, BarChart3, Bell, Search, CheckCircle } from 'lucide-react';
 import { differenceInDays, addDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { PatientPhotosView } from '@/components/practitioner/PatientPhotosView';
@@ -26,7 +27,15 @@ const NewPractitionerDashboard = () => {
   const resolveAlert = useResolveAlert();
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [patientSearch, setPatientSearch] = useState('');
   const selectedPatient = patients?.find(p => p.id === selectedPatientId);
+
+  const isFinished = (p: { current_aligner: number; total_aligners: number }) =>
+    p.current_aligner >= p.total_aligners;
+
+  const filteredPatients = patients?.filter(p =>
+    p.profile.full_name.toLowerCase().includes(patientSearch.toLowerCase())
+  );
   
   const unresolvedAlerts = alerts.filter(a => !a.resolved);
   const unresolvedAlertCount = unresolvedAlerts.length;
@@ -142,6 +151,15 @@ const NewPractitionerDashboard = () => {
           {/* Patient List */}
           <div className="lg:col-span-1 space-y-4">
             <h2 className="text-lg font-semibold">Liste des patients</h2>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher un patient…"
+                value={patientSearch}
+                onChange={(e) => setPatientSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
             {loadingPatients ? (
               <div className="flex justify-center p-8">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -154,33 +172,43 @@ const NewPractitionerDashboard = () => {
               </Card>
             ) : (
               <div className="space-y-2">
-                {patients?.map((patient) => {
+                {filteredPatients?.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">Aucun patient trouvé</p>
+                )}
+                {filteredPatients?.map((patient) => {
                   const daysUntilChange = getDaysUntilChange(patient);
+                  const finished = isFinished(patient);
                   
                   return (
                     <Card 
                       key={patient.id}
                       className={`glass-card cursor-pointer transition-all hover:shadow-md ${
                         selectedPatientId === patient.id ? 'ring-2 ring-primary' : ''
-                      } ${alertsByPatient[patient.id]?.high > 0 ? 'border-l-4 border-l-destructive' : ''}`}
+                      } ${alertsByPatient[patient.id]?.high > 0 ? 'border-l-4 border-l-destructive' : ''} ${finished ? 'opacity-50' : ''}`}
                       onClick={() => setSelectedPatientId(patient.id)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
                           <Avatar>
-                            <AvatarFallback className="bg-primary/10 text-primary">
+                            <AvatarFallback className={finished ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}>
                               {getInitials(patient.profile.full_name)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="font-medium truncate">{patient.profile.full_name}</p>
-                              {alertsByPatient[patient.id]?.high > 0 && (
+                              <p className={`font-medium truncate ${finished ? 'text-muted-foreground' : ''}`}>{patient.profile.full_name}</p>
+                              {finished && (
+                                <Badge variant="secondary" className="text-xs gap-1">
+                                  <CheckCircle className="h-3 w-3" />
+                                  Terminé
+                                </Badge>
+                              )}
+                              {!finished && alertsByPatient[patient.id]?.high > 0 && (
                                 <Badge className="bg-destructive text-destructive-foreground text-xs">
                                   {alertsByPatient[patient.id].high} urgent
                                 </Badge>
                               )}
-                              {alertsByPatient[patient.id]?.total > 0 && alertsByPatient[patient.id]?.high === 0 && (
+                              {!finished && alertsByPatient[patient.id]?.total > 0 && alertsByPatient[patient.id]?.high === 0 && (
                                 <Badge className="bg-warning text-warning-foreground text-xs">
                                   {alertsByPatient[patient.id].total} alerte{alertsByPatient[patient.id].total > 1 ? 's' : ''}
                                 </Badge>
@@ -190,7 +218,7 @@ const NewPractitionerDashboard = () => {
                               Aligneur {patient.current_aligner}/{patient.total_aligners}
                             </p>
                           </div>
-                          {daysUntilChange !== null && daysUntilChange <= 2 && (
+                          {!finished && daysUntilChange !== null && daysUntilChange <= 2 && (
                             <Badge variant={daysUntilChange <= 0 ? 'destructive' : 'secondary'}>
                               {daysUntilChange <= 0 ? 'Changement dû' : `${daysUntilChange}j`}
                             </Badge>

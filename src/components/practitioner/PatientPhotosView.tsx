@@ -6,6 +6,7 @@ import { AnalysisHistory } from '@/components/patient/AnalysisHistory';
 import { StatsOverview } from '@/components/patient/StatsOverview';
 import { PatientAlertsHistory } from './PatientAlertsHistory';
 import { BarChart3, History, Loader2, Camera } from 'lucide-react';
+import { usePractitionerAlerts } from '@/hooks/usePractitionerAlerts';
 
 interface PatientPhotosViewProps {
   patientId: string;
@@ -14,6 +15,8 @@ interface PatientPhotosViewProps {
 
 export function PatientPhotosView({ patientId, patientName }: PatientPhotosViewProps) {
   const { data: photos, isLoading } = usePatientPhotos(patientId);
+  const { data: allAlerts = [] } = usePractitionerAlerts();
+  const patientAlertCount = allAlerts.filter(a => a.patient_id === patientId && !a.resolved).length;
 
   if (isLoading) {
     return (
@@ -42,7 +45,7 @@ export function PatientPhotosView({ patientId, patientName }: PatientPhotosViewP
 
   return (
     <div className="space-y-6">
-      <StatsOverview photos={photos} />
+      <StatsOverview photos={photos} patientId={patientId} alertCount={patientAlertCount} />
 
       <Tabs defaultValue="history" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">

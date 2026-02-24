@@ -1,29 +1,137 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
+import { getCorsHeaders, handleCors } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// ── S5: Input validation helpers ──────────────────────────────────────
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const VALID_ATTACHMENT_STATUS = ['ok', 'partial', 'missing'] as const;
+const VALID_INSERTION_QUALITY = ['good', 'acceptable', 'poor'] as const;
+const VALID_GINGIVAL_HEALTH = ['healthy', 'mild_inflammation', 'inflammation'] as const;
+
+interface AnalysisInput {
+  attachmentStatus?: string;
+  insertionQuality?: string;
+  gingivalHealth?: string;
+  overallScore?: number;
+  [key: string]: unknown;
+}
+
+function validateInputs(
+  patientId: unknown,
+  photoId: unknown,
+  analysisResult: unknown,
+): string | null {
+  if (!patientId || typeof patientId !== 'string' || !UUID_RE.test(patientId)) {
+    return 'patientId must be a valid UUID';
+  }
+  if (photoId !== undefined && photoId !== null) {
+    if (typeof photoId !== 'string' || !UUID_RE.test(photoId)) {
+      return 'photoId must be a valid UUID if provided';
+    }
+  }
+  if (!analysisResult || typeof analysisResult !== 'object') {
+    return 'analysisResult must be a non-null object';
+  }
+  const ar = analysisResult as AnalysisInput;
+  if (ar.attachmentStatus && !(VALID_ATTACHMENT_STATUS as readonly string[]).includes(ar.attachmentStatus)) {
+    return `attachmentStatus must be one of: ${VALID_ATTACHMENT_STATUS.join(', ')}`;
+  }
+  if (ar.insertionQuality && !(VALID_INSERTION_QUALITY as readonly string[]).includes(ar.insertionQuality)) {
+    return `insertionQuality must be one of: ${VALID_INSERTION_QUALITY.join(', ')}`;
+  }
+  if (ar.gingivalHealth && !(VALID_GINGIVAL_HEALTH as readonly string[]).includes(ar.gingivalHealth)) {
+    return `gingivalHealth must be one of: ${VALID_GINGIVAL_HEALTH.join(', ')}`;
+  }
+  if (ar.overallScore !== undefined && (typeof ar.overallScore !== 'number' || ar.overallScore < 0 || ar.overallScore > 100)) {
+    return 'overallScore must be a number between 0 and 100';
+  }
+  return null; // valid
+}
+
+// ── Main handler ──────────────────────────────────────────────────────
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  // S4: CORS with restricted origins
+  const corsResponse = handleCors(req);
+  if (corsResponse) return corsResponse;
+  const corsHeaders = getCorsHeaders(req);
 
   try {
+    // S3: verify_jwt = true in config.toml; also check header as defense-in-depth
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { patientId, photoId, analysisResult } = await req.json();
 
-    if (!patientId || !analysisResult) {
+    // S5: Strict input validation
+    const validationError = validateInputs(patientId, photoId, analysisResult);
+    if (validationError) {
       return new Response(
-        JSON.stringify({ error: "patientId and analysisResult are required" }),
+        JSON.stringify({ error: validationError }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: { user: callerUser }, error: callerError } = await authClient.auth.getUser();
+    if (callerError || !callerUser) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const [{ data: callerRoles }, { data: callerProfile }] = await Promise.all([
+      supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', callerUser.id),
+      supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', callerUser.id)
+        .maybeSingle(),
+    ]);
+
+    const isAdmin = (callerRoles || []).some((r) => r.role === 'admin');
+
+    if (!isAdmin) {
+      if (!callerProfile) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden" }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: callerPatient } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('profile_id', callerProfile.id)
+        .maybeSingle();
+
+      if (!callerPatient || callerPatient.id !== patientId) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden" }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Find all practitioners assigned to this patient
     const { data: assignments, error: assignError } = await supabase
@@ -34,6 +142,28 @@ serve(async (req) => {
     if (assignError) {
       console.error('Error fetching practitioner assignments:', assignError);
       throw assignError;
+    }
+
+    // S5: If a photoId was provided, verify it belongs to this patient
+    if (photoId) {
+      const { data: photo, error: photoError } = await supabase
+        .from('patient_photos')
+        .select('id, patient_id')
+        .eq('id', photoId)
+        .maybeSingle();
+
+      if (photoError || !photo) {
+        return new Response(
+          JSON.stringify({ error: "Photo not found" }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (photo.patient_id !== patientId) {
+        return new Response(
+          JSON.stringify({ error: "Photo does not belong to this patient" }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     if (!assignments || assignments.length === 0) {

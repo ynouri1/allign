@@ -19,6 +19,7 @@ interface Reminder {
 interface RemindersPanelProps {
   nextChangeDate: Date;
   lastPhotoDate?: Date;
+  treatmentStartDate?: Date;
   currentAligner: number;
   totalAligners: number;
   onConfirmChange?: () => void;
@@ -28,6 +29,7 @@ interface RemindersPanelProps {
 export function RemindersPanel({ 
   nextChangeDate, 
   lastPhotoDate, 
+  treatmentStartDate,
   currentAligner, 
   totalAligners,
   onConfirmChange,
@@ -35,7 +37,9 @@ export function RemindersPanel({
 }: RemindersPanelProps) {
   const today = new Date();
   const daysUntilChange = differenceInDays(nextChangeDate, today);
-  const daysSincePhoto = lastPhotoDate ? differenceInDays(today, lastPhotoDate) : 999;
+  // Utiliser la dernière photo, sinon la date de début de traitement, sinon aujourd'hui
+  const referenceDate = lastPhotoDate || treatmentStartDate || today;
+  const daysSincePhoto = differenceInDays(today, referenceDate);
   const canConfirmChange = daysUntilChange <= 0 && currentAligner < totalAligners;
 
   const reminders: Reminder[] = [];
@@ -64,7 +68,9 @@ export function RemindersPanel({
       type: 'photo_needed',
       title: 'Photo de suivi',
       message: daysSincePhoto >= 7 
-        ? `Aucune photo depuis ${daysSincePhoto} jours. Prenez une photo pour votre suivi.`
+        ? lastPhotoDate 
+          ? `Dernière photo il y a ${daysSincePhoto} jours. Prenez une photo pour votre suivi.`
+          : `Aucune photo depuis le début du traitement (${daysSincePhoto} jours). Prenez une photo pour votre suivi.`
         : `Il serait bien de prendre une photo de suivi.`,
       date: today,
       urgent: daysSincePhoto >= 7,
@@ -76,7 +82,7 @@ export function RemindersPanel({
     id: 'daily-wear',
     type: 'daily_wear',
     title: 'Port quotidien',
-    message: 'Portez vos gouttières 22h/jour pour des résultats optimaux.',
+    message: 'Portez vos gouttières 16h/jour pour des résultats optimaux.',
     date: today,
     urgent: false,
   });

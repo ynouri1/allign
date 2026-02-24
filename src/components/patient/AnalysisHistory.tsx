@@ -1,12 +1,11 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { PatientPhotoRecord } from '@/hooks/usePatientPhotos';
-import { CheckCircle, AlertTriangle, XCircle, Clock, ChevronRight, MessageSquare, User } from 'lucide-react';
+import { CheckCircle, AlertTriangle, XCircle, Clock, ChevronRight, MessageSquare, User, ZoomIn, ZoomOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AnalysisResult } from './AnalysisResult';
 import { PhotoAnalysis } from '@/types/patient';
@@ -114,12 +113,48 @@ function usePhotoAlerts(photoIds: string[]) {
 
 export function AnalysisHistory({ photos, maxItems }: AnalysisHistoryProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<PatientPhotoRecord | null>(null);
+  const [photoZoomed, setPhotoZoomed] = useState(false);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const panStart = useRef<{ x: number; y: number } | null>(null);
+  const PAGE_SIZE = 5;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  const handlePhotoSelect = useCallback((photo: PatientPhotoRecord) => {
+    setSelectedPhoto(photo);
+    setPhotoZoomed(false);
+    setPanOffset({ x: 0, y: 0 });
+  }, []);
+
+  const toggleZoom = useCallback(() => {
+    setPhotoZoomed(z => {
+      if (z) setPanOffset({ x: 0, y: 0 });
+      return !z;
+    });
+  }, []);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (!photoZoomed) return;
+    panStart.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [photoZoomed, panOffset]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!panStart.current) return;
+    setPanOffset({ x: e.clientX - panStart.current.x, y: e.clientY - panStart.current.y });
+  }, []);
+
+  const handlePointerUp = useCallback(() => {
+    panStart.current = null;
+  }, []);
 
   const analyzedPhotos = photos
     .filter(p => p.analysis_status === 'analyzed')
     .slice(0, maxItems);
 
-  const photoIds = analyzedPhotos.map(p => p.id);
+  const visiblePhotos = analyzedPhotos.slice(0, visibleCount);
+  const hasMore = visibleCount < analyzedPhotos.length;
+
+  const photoIds = visiblePhotos.map(p => p.id);
   const { data: alertsByPhoto = {} } = usePhotoAlerts(photoIds);
 
   const getStatusIcon = (status: string | null) => {
@@ -187,19 +222,22 @@ export function AnalysisHistory({ photos, maxItems }: AnalysisHistoryProps) {
   return (
     <>
       <Card className="overflow-hidden">
-        <div className="p-4 border-b border-border/50">
+        <div className="p-4 border-b border-border/50 flex items-center justify-between">
           <h3 className="font-semibold">Historique des analyses</h3>
+          <span className="text-xs text-muted-foreground">
+            {visiblePhotos.length} / {analyzedPhotos.length} analyse{analyzedPhotos.length > 1 ? 's' : ''}
+          </span>
         </div>
-        <ScrollArea className="max-h-96">
+        <div>
           <div className="divide-y divide-border/50">
-            {analyzedPhotos.map((photo) => {
+            {visiblePhotos.map((photo) => {
               const photoAlerts = alertsByPhoto[photo.id] || [];
               
               return (
                 <div key={photo.id} className="p-4">
                   <div
                     className="hover:bg-muted/50 cursor-pointer transition-colors flex items-center gap-4 rounded-lg p-2 -m-2"
-                    onClick={() => setSelectedPhoto(photo)}
+                    onClick={() => handlePhotoSelect(photo)}
                   >
                     {/* Photo thumbnail */}
                     <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
@@ -281,12 +319,22 @@ export function AnalysisHistory({ photos, maxItems }: AnalysisHistoryProps) {
               );
             })}
           </div>
-        </ScrollArea>
+          {hasMore && (
+            <div className="p-4 text-center border-t border-border/50">
+              <button
+                onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                Voir plus ({analyzedPhotos.length - visibleCount} restante{analyzedPhotos.length - visibleCount > 1 ? 's' : ''})
+              </button>
+            </div>
+          )}
+        </div>
       </Card>
 
       {/* Detail modal */}
-      <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>
-        <DialogContent className="sm:max-w-lg">
+      <Dialog open={!!selectedPhoto} onOpenChange={() => { setSelectedPhoto(null); setPhotoZoomed(false); setPanOffset({ x: 0, y: 0 }); }}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               Analyse du {selectedPhoto && format(new Date(selectedPhoto.created_at), 'd MMMM yyyy', { locale: fr })}
@@ -295,13 +343,37 @@ export function AnalysisHistory({ photos, maxItems }: AnalysisHistoryProps) {
           
           {selectedPhoto && (
             <div className="space-y-4">
-              {/* Photo */}
-              <div className="aspect-[4/3] rounded-lg overflow-hidden bg-muted">
-                <img
-                  src={selectedPhoto.photo_url}
-                  alt="Photo analysée"
-                  className="w-full h-full object-cover"
-                />
+              {/* Photo with zoom */}
+              <div className="relative">
+                <div
+                  className={cn(
+                    'aspect-[4/3] rounded-lg overflow-hidden bg-muted',
+                    photoZoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'
+                  )}
+                  onClick={!photoZoomed ? toggleZoom : undefined}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                >
+                  <img
+                    src={selectedPhoto.photo_url}
+                    alt="Photo analysée"
+                    className="w-full h-full object-cover transition-transform duration-200 select-none"
+                    draggable={false}
+                    style={{
+                      transform: photoZoomed
+                        ? `scale(2.5) translate(${panOffset.x / 2.5}px, ${panOffset.y / 2.5}px)`
+                        : 'scale(1)',
+                    }}
+                  />
+                </div>
+                <button
+                  onClick={toggleZoom}
+                  className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                  title={photoZoomed ? 'Dézoomer' : 'Zoomer'}
+                >
+                  {photoZoomed ? <ZoomOut className="h-4 w-4" /> : <ZoomIn className="h-4 w-4" />}
+                </button>
               </div>
 
               {/* Analysis result */}

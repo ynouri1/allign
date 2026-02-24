@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -80,6 +81,34 @@ async function getSignedUrl(photoUrl: string): Promise<string> {
 }
 
 export function usePractitionerAlerts() {
+  const queryClient = useQueryClient();
+
+  // Realtime: auto-refresh when alerts change in DB
+  useEffect(() => {
+    const channel = supabase
+      .channel('practitioner-alerts-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'practitioner_alerts' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['practitioner-alerts'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'patient_photos' },
+        () => {
+          // Photo analysis results updated → refresh alerts (photo data joined)
+          queryClient.invalidateQueries({ queryKey: ['practitioner-alerts'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['practitioner-alerts'],
     queryFn: async () => {

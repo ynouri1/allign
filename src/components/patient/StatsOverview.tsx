@@ -1,22 +1,23 @@
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { PatientPhotoRecord } from '@/hooks/usePatientPhotos';
-import { Camera, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Camera, Timer, AlertTriangle, CheckCircle } from 'lucide-react';
 import { usePatientAlerts } from '@/hooks/usePatientAlerts';
+import { useWearTimer, formatDurationShort, DAILY_GOAL_SECONDS } from '@/hooks/useWearTimer';
 
 interface StatsOverviewProps {
   photos: PatientPhotoRecord[];
+  patientId?: string;
+  /** When provided, overrides the usePatientAlerts() lookup (useful in practitioner context) */
+  alertCount?: number;
 }
 
-export function StatsOverview({ photos }: StatsOverviewProps) {
+export function StatsOverview({ photos, patientId, alertCount }: StatsOverviewProps) {
   const { data: alertsData } = usePatientAlerts();
+  const { totalSeconds } = useWearTimer(patientId);
   
   const stats = useMemo(() => {
     const analyzed = photos.filter(p => p.analysis_status === 'analyzed');
-    
-    const avgScore = analyzed.length > 0
-      ? Math.round(analyzed.reduce((sum, p) => sum + (p.overall_score || 0), 0) / analyzed.length)
-      : null;
 
     const healthy = analyzed.filter(p =>
       p.attachment_status === 'ok' &&
@@ -27,13 +28,16 @@ export function StatsOverview({ photos }: StatsOverviewProps) {
     return {
       totalPhotos: photos.length,
       analyzedPhotos: analyzed.length,
-      avgScore,
       healthyCount: healthy,
     };
   }, [photos]);
 
-  // Use unresolved alerts count from practitioner_alerts
-  const unresolvedAlerts = alertsData?.unresolvedCount || 0;
+  // Use prop override if provided (practitioner view), otherwise use hook (patient view)
+  const unresolvedAlerts = alertCount ?? alertsData?.unresolvedCount ?? 0;
+
+  const goalHours = DAILY_GOAL_SECONDS / 3600;
+  const wearPercent = Math.min(100, Math.round((totalSeconds / DAILY_GOAL_SECONDS) * 100));
+  const goalReached = totalSeconds >= DAILY_GOAL_SECONDS;
 
   const statCards = [
     {
@@ -44,11 +48,11 @@ export function StatsOverview({ photos }: StatsOverviewProps) {
       bgColor: 'bg-primary/10',
     },
     {
-      label: 'Score moyen',
-      value: stats.avgScore !== null ? `${stats.avgScore}%` : '-',
-      icon: TrendingUp,
-      color: 'text-success',
-      bgColor: 'bg-success/10',
+      label: `Port (obj. ${goalHours}h)`,
+      value: totalSeconds > 0 ? formatDurationShort(totalSeconds) : '-',
+      icon: Timer,
+      color: goalReached ? 'text-green-500' : wearPercent >= 50 ? 'text-primary' : 'text-amber-500',
+      bgColor: goalReached ? 'bg-green-500/10' : wearPercent >= 50 ? 'bg-primary/10' : 'bg-amber-500/10',
     },
     {
       label: 'Analyses OK',

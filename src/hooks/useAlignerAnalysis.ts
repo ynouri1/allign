@@ -44,7 +44,22 @@ export function useAlignerAnalysis() {
 
       if (error) {
         console.error('Analysis error:', error);
-        toast.error('Erreur lors de l\'analyse de la photo');
+
+        let message = 'Erreur lors de l\'analyse de la photo';
+
+        try {
+          const maybeContext = (error as { context?: { json?: () => Promise<unknown> } }).context;
+          if (maybeContext?.json) {
+            const payload = await maybeContext.json() as { error?: string };
+            if (payload?.error) {
+              message = payload.error;
+            }
+          }
+        } catch {
+          // Keep generic fallback message
+        }
+
+        toast.error(message);
         return null;
       }
 

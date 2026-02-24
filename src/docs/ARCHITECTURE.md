@@ -10,8 +10,8 @@
 | **Routing** | React Router v6 |
 | **3D** | Three.js + React Three Fiber + Drei |
 | **Charts** | Recharts |
-| **Backend** | Lovable Cloud (Supabase) — PostgreSQL, Auth, Storage, Edge Functions |
-| **IA** | Google Gemini 2.5 Flash via Lovable AI Gateway |
+| **Backend** | Supabase — PostgreSQL, Auth, Storage, Edge Functions |
+| **IA** | Google Gemini (API directe) |
 | **Animations** | CSS Tailwind Animate |
 
 ---
@@ -31,7 +31,7 @@
 └───────────────────────┬───────────────────────────────┘
                         │ HTTPS
 ┌───────────────────────┴───────────────────────────────┐
-│                  Lovable Cloud (Supabase)              │
+│                     Supabase Cloud                      │
 │  ┌──────────┐ ┌──────────┐ ┌────────────┐ ┌────────┐ │
 │  │   Auth   │ │ Database │ │  Storage   │ │  Edge  │ │
 │  │          │ │ (Postgres)│ │ (Buckets)  │ │Functions│ │
@@ -39,7 +39,7 @@
 └───────────────────────────────────────────────┼──────┘
                                                 │
                                     ┌───────────┴──────────┐
-                                    │  Lovable AI Gateway   │
+                                    │  Google Gemini API     │
                                     │  (Gemini 2.5 Flash)   │
                                     └──────────────────────┘
 ```
@@ -151,7 +151,7 @@ supabase/
 ### 4.1 Capture et analyse de photo
 
 ```
-Patient                 Frontend                Edge Function           Lovable AI
+Patient                 Frontend                Edge Function           Gemini API
   │                        │                        │                      │
   │─── Prend photo ───────>│                        │                      │
   │                        │─── Contrôle qualité ──>│                      │

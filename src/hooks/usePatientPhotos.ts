@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -81,6 +82,27 @@ async function getSignedUrl(photoUrl: string): Promise<string> {
 }
 
 export function useMyPhotos() {
+  const queryClient = useQueryClient();
+
+  // Realtime: auto-refresh when photos change in DB (new photo, analysis done)
+  useEffect(() => {
+    const channel = supabase
+      .channel('patient-photos-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'patient_photos' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['my-photos'] });
+          queryClient.invalidateQueries({ queryKey: ['patient-photos'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['my-photos'],
     queryFn: async (): Promise<{ photos: PatientPhotoRecord[]; patientId: string } | null> => {

@@ -1,9 +1,68 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.0";
+import { getCorsHeaders, handleCors } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const WINDOW_MS = Number(Deno.env.get("ANALYZE_RATE_WINDOW_MS") ?? "60000");
+const MAX_REQUESTS_PER_WINDOW = Number(Deno.env.get("ANALYZE_RATE_MAX_REQUESTS") ?? "15");
+const COOLDOWN_MS = Number(Deno.env.get("ANALYZE_RATE_COOLDOWN_MS") ?? "30000");
+const UPSTREAM_429_COOLDOWN_MS = Number(Deno.env.get("ANALYZE_UPSTREAM_429_COOLDOWN_MS") ?? "30000");
+
+type RateState = {
+  windowStart: number;
+  requestCount: number;
+  cooldownUntil: number;
 };
+
+const rateLimitByUser = new Map<string, RateState>();
+
+function getOrInitRateState(userId: string, now: number): RateState {
+  const existing = rateLimitByUser.get(userId);
+  if (existing) return existing;
+
+  const initial: RateState = {
+    windowStart: now,
+    requestCount: 0,
+    cooldownUntil: 0,
+  };
+  rateLimitByUser.set(userId, initial);
+  return initial;
+}
+
+function getRetryAfterSeconds(cooldownUntil: number, now: number): number {
+  return Math.max(1, Math.ceil((cooldownUntil - now) / 1000));
+}
+
+function applyLocalRateLimit(userId: string): { blocked: boolean; retryAfterSeconds?: number } {
+  const now = Date.now();
+  const state = getOrInitRateState(userId, now);
+
+  if (state.cooldownUntil > now) {
+    return { blocked: true, retryAfterSeconds: getRetryAfterSeconds(state.cooldownUntil, now) };
+  }
+
+  if (now - state.windowStart >= WINDOW_MS) {
+    state.windowStart = now;
+    state.requestCount = 0;
+  }
+
+  state.requestCount += 1;
+
+  if (state.requestCount > MAX_REQUESTS_PER_WINDOW) {
+    state.cooldownUntil = now + COOLDOWN_MS;
+    state.windowStart = now;
+    state.requestCount = 0;
+    return { blocked: true, retryAfterSeconds: getRetryAfterSeconds(state.cooldownUntil, now) };
+  }
+
+  return { blocked: false };
+}
+
+function applyUpstreamCooldown(userId: string): number {
+  const now = Date.now();
+  const state = getOrInitRateState(userId, now);
+  state.cooldownUntil = Math.max(state.cooldownUntil, now + UPSTREAM_429_COOLDOWN_MS);
+  return getRetryAfterSeconds(state.cooldownUntil, now);
+}
 
 // Helper to format teeth numbers for the prompt
 function formatTeethForPrompt(teeth: number[]): string {
@@ -26,13 +85,97 @@ function formatTeethForPrompt(teeth: number[]): string {
   return description;
 }
 
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
+async function resolveImageInput(imageBase64?: string, imageUrl?: string): Promise<{ mimeType: string; data: string } | null> {
+  if (imageBase64) {
+    const dataUrlMatch = imageBase64.match(/^data:(.+);base64,(.+)$/);
+    if (dataUrlMatch) {
+      return {
+        mimeType: dataUrlMatch[1] || "image/jpeg",
+        data: dataUrlMatch[2],
+      };
+    }
+
+    return {
+      mimeType: "image/jpeg",
+      data: imageBase64,
+    };
   }
 
+  if (imageUrl) {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error("Unable to fetch image URL");
+    }
+
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return {
+      mimeType: contentType,
+      data: uint8ToBase64(bytes),
+    };
+  }
+
+  return null;
+}
+
+serve(async (req) => {
+  // S4: CORS with restricted origins
+  const corsResponse = handleCors(req);
+  if (corsResponse) return corsResponse;
+  const corsHeaders = getCorsHeaders(req);
+
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const authClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: { user }, error: userError } = await authClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const localRateLimit = applyLocalRateLimit(user.id);
+    if (localRateLimit.blocked) {
+      return new Response(
+        JSON.stringify({
+          error: `Trop de requêtes locales. Réessaie dans ${localRateLimit.retryAfterSeconds}s.`,
+          retryAfterSeconds: localRateLimit.retryAfterSeconds,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+            'Retry-After': String(localRateLimit.retryAfterSeconds ?? 1),
+          },
+        }
+      );
+    }
+
     const { imageBase64, imageUrl, attachmentTeeth = [] } = await req.json();
 
     if (!imageBase64 && !imageUrl) {
@@ -43,9 +186,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      console.error("GEMINI_API_KEY is not configured");
       return new Response(
         JSON.stringify({ error: "AI service not configured" }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -55,10 +198,13 @@ serve(async (req) => {
     console.log("Analyzing aligner photo with Gemini...");
     console.log("Attachment teeth provided:", attachmentTeeth);
 
-    // Prepare the image content
-    const imageContent = imageBase64 
-      ? { type: "image_url", image_url: { url: imageBase64 } }
-      : { type: "image_url", image_url: { url: imageUrl } };
+    const imageInput = await resolveImageInput(imageBase64, imageUrl);
+    if (!imageInput) {
+      return new Response(
+        JSON.stringify({ error: "Image is required (base64 or URL)" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Build dynamic prompt based on attachment teeth
     const teethInfo = formatTeethForPrompt(attachmentTeeth);
@@ -120,57 +266,86 @@ Réponds UNIQUEMENT avec un JSON valide sans markdown, en suivant exactement ce 
   "attachmentDetails": "Description de l'état des taquets sur les dents spécifiées"
 }`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
+        contents: [
           {
-            role: "user",
-            content: [
-              { 
-                type: "text", 
-                text: hasSpecificTeeth 
+            parts: [
+              {
+                text: `${systemPrompt}\n\n${hasSpecificTeeth
                   ? `Analyse cette photo d'aligneur dentaire. Concentre-toi particulièrement sur les dents ${attachmentTeeth.join(', ')} qui portent des taquets. Fournis ton évaluation en JSON.`
-                  : "Analyse cette photo d'aligneur dentaire et fournis ton évaluation en JSON."
+                  : "Analyse cette photo d'aligneur dentaire et fournis ton évaluation en JSON."}`,
               },
-              imageContent
-            ]
-          }
+              {
+                inline_data: {
+                  mime_type: imageInput.mimeType,
+                  data: imageInput.data,
+                },
+              },
+            ],
+          },
         ],
+        generationConfig: {
+          responseMimeType: "application/json",
+        },
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+      console.error("Gemini API error:", response.status, errorText);
+
+      let upstreamMessage = "Erreur lors de l'analyse AI";
+      try {
+        const parsed = JSON.parse(errorText) as {
+          error?: {
+            message?: string;
+            details?: Array<{ reason?: string }>;
+          };
+        };
+        const reason = parsed.error?.details?.[0]?.reason;
+        const message = parsed.error?.message ?? "";
+
+        if (reason === "API_KEY_INVALID" || /api key expired|api key invalid/i.test(message)) {
+          upstreamMessage = "Clé Gemini invalide ou expirée. Mets à jour GEMINI_API_KEY.";
+        }
+      } catch {
+        // Ignore JSON parse errors and keep fallback message.
+      }
       
       if (response.status === 429) {
+        const retryAfterSeconds = applyUpstreamCooldown(user.id);
         return new Response(
-          JSON.stringify({ error: "Trop de requêtes, veuillez réessayer plus tard." }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({
+            error: `Quota Gemini atteint. Réessaie dans ${retryAfterSeconds}s.`,
+            retryAfterSeconds,
+          }),
+          {
+            status: 429,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'Retry-After': String(retryAfterSeconds),
+            },
+          }
         );
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Crédits AI épuisés. Veuillez ajouter des crédits." }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
       return new Response(
-        JSON.stringify({ error: "Erreur lors de l'analyse AI" }),
+        JSON.stringify({ error: upstreamMessage }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    // Gemini 2.5 "thinking" models may include thought parts — filter them out
+    const content = data.candidates?.[0]?.content?.parts
+      ?.filter((part: { thought?: boolean }) => !part.thought)
+      ?.map((part: { text?: string }) => part.text || "")
+      .join("");
 
     if (!content) {
       console.error("No content in AI response");

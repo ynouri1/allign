@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -15,6 +16,27 @@ export interface PatientAlert {
 
 export function usePatientAlerts() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Realtime: auto-refresh when alerts change in DB
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('patient-alerts-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'practitioner_alerts' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['patient-alerts', user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
 
   return useQuery({
     queryKey: ['patient-alerts', user?.id],

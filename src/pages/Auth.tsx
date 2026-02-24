@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Mail, Lock, Smile } from 'lucide-react';
+import { Loader2, Mail, Lock, Smile, ArrowLeft } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('Email invalide');
@@ -18,8 +18,11 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
   
-  const { signIn, signUp, user, loading } = useAuth();
+  const { signIn, user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -49,47 +52,61 @@ const Auth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-    
-    setIsLoading(true);
-    const { error } = await signIn(email, password);
-    setIsLoading(false);
 
-    if (error) {
-      toast({
-        title: 'Erreur de connexion',
-        description: error.message === 'Invalid login credentials' 
-          ? 'Email ou mot de passe incorrect'
-          : error.message,
-        variant: 'destructive',
-      });
-    } else {
-      navigate('/');
+    setIsLoading(true);
+    try {
+      const { error } = await signIn(email, password);
+
+      if (error) {
+        const isNetworkError = /fetch|network|failed to fetch|load failed/i.test(error.message || '');
+        toast({
+          title: 'Erreur de connexion',
+          description: isNetworkError
+            ? 'Serveur Supabase inaccessible. Vérifie que Supabase local est démarré.'
+            : error.message === 'Invalid login credentials'
+              ? 'Email ou mot de passe incorrect'
+              : error.message,
+          variant: 'destructive',
+        });
+      } else {
+        navigate('/');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
-    
-    setIsLoading(true);
-    const { error } = await signUp(email, password);
-    setIsLoading(false);
-
-    if (error) {
-      let message = error.message;
-      if (error.message.includes('already registered')) {
-        message = 'Cet email est déjà utilisé';
+    const result = emailSchema.safeParse(forgotEmail);
+    if (!result.success) {
+      toast({ title: 'Email invalide', description: result.error.errors[0].message, variant: 'destructive' });
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('reset-password', {
+        body: { email: forgotEmail.trim() },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: 'Erreur', description: data.error, variant: 'destructive' });
+      } else {
+        toast({
+          title: 'Email envoyé',
+          description: 'Si un compte existe avec cet email, un nouveau mot de passe vous sera envoyé.',
+        });
+        setShowForgot(false);
+        setForgotEmail('');
       }
+    } catch (err) {
       toast({
-        title: 'Erreur d\'inscription',
-        description: message,
+        title: 'Erreur',
+        description: err instanceof Error ? err.message : 'Une erreur est survenue',
         variant: 'destructive',
       });
-    } else {
-      toast({
-        title: 'Inscription réussie',
-        description: 'Vous pouvez maintenant vous connecter',
-      });
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -114,13 +131,40 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Connexion</TabsTrigger>
-              <TabsTrigger value="signup">Inscription</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="signin">
+          {showForgot ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <button
+                type="button"
+                onClick={() => setShowForgot(false)}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Retour à la connexion
+              </button>
+              <p className="text-sm text-muted-foreground">
+                Saisissez votre adresse email. Si un compte actif existe, un nouveau mot de passe vous sera envoyé.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="email-forgot">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email-forgot"
+                    type="email"
+                    placeholder="votre@email.com"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="pl-10"
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <Button type="submit" className="w-full gradient-primary" disabled={forgotLoading}>
+                {forgotLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Réinitialiser le mot de passe
+              </Button>
+            </form>
+          ) : (
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email-signin">Email</Label>
@@ -156,48 +200,15 @@ const Auth = () => {
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Se connecter
                 </Button>
+                <button
+                  type="button"
+                  onClick={() => setShowForgot(true)}
+                  className="w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Mot de passe oublié ?
+                </button>
               </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email-signup">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email-signup"
-                      type="email"
-                      placeholder="votre@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password-signup">Mot de passe</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="password-signup"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-                </div>
-                <Button type="submit" className="w-full gradient-primary" disabled={isLoading}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  S'inscrire
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+          )}
         </CardContent>
       </Card>
     </div>

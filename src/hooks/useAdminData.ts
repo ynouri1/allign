@@ -264,13 +264,36 @@ export function useAssignPatient() {
         });
 
       if (error) throw error;
-      return { success: true };
+
+      // Send notification emails (best-effort: don't fail the assignment)
+      try {
+        const { error: emailError } = await supabase.functions.invoke(
+          'send-assignment-emails',
+          {
+            body: {
+              patient_id: data.patient_id,
+              practitioner_id: data.practitioner_id,
+            },
+          }
+        );
+        if (emailError) {
+          console.warn('Email sending failed:', emailError.message);
+          return { success: true, emailSent: false };
+        }
+        return { success: true, emailSent: true };
+      } catch (emailErr) {
+        console.warn('Email sending failed:', emailErr);
+        return { success: true, emailSent: false };
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_result) => {
       queryClient.invalidateQueries({ queryKey: ['admin-assignments'] });
+      const emailSent = _result?.emailSent !== false;
       toast({
         title: 'Assignation créée',
-        description: 'Le patient a été assigné au praticien',
+        description: emailSent
+          ? 'Le patient a été assigné et les emails ont été envoyés'
+          : 'Le patient a été assigné (envoi des emails échoué)',
       });
     },
     onError: (error: Error) => {

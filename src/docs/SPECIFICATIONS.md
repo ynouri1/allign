@@ -56,7 +56,7 @@
 - **Tutoriel photo** intégré
 
 ### 3.2 Analyse IA des photos
-- **Modèle** : Google Gemini 2.5 Flash via Lovable AI Gateway
+- **Modèle** : Google Gemini (API directe)
 - **Critères analysés** :
   - **État des taquets** : ok / partial / missing — vérifie chaque dent spécifiée dans le plan de traitement
   - **Qualité d'insertion** : good / acceptable / poor — détecte les espaces entre gouttière et dents
