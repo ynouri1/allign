@@ -1,0 +1,63 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm ci",
+  "framework": "vite",
+  "routes": [
+    {
+      "src": "/sw.js",
+      "headers": {
+        "Cache-Control": "public, max-age=0, must-revalidate",
+        "Service-Worker-Allowed": "/"
+      }
+    },
+    {
+      "src": "/manifest.webmanifest",
+      "headers": {
+        "Content-Type": "application/manifest+json",
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/assets/(.*)",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html",
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(self), microphone=(), geolocation=(), interest-cohort=()",
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://gpvpbmibhqieimurohwd.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://gpvpbmibhqieimurohwd.supabase.co wss://gpvpbmibhqieimurohwd.supabase.co; media-src 'self' blob:; object-src 'none'; frame-src 'none'; worker-src 'self' blob:; child-src 'self' blob:; form-action 'self'; upgrade-insecure-requests; block-all-mixed-content"
+      }
+    }
+  ],
+  "env": {
+    "NODE_VERSION": "20"
+  },
+  "build": {
+    "env": {
+      "VITE_SUPABASE_URL": "@vite_supabase_url",
+      "VITE_SUPABASE_ANON_KEY": "@vite_supabase_anon_key"
+    }
+  },
+  "functions": {
+    "app/**": {
+      "includeFiles": "dist/**"
+    }
+  },
+  "redirects": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://gpvpbmibhqieimurohwd.supabase.co/rest/v1/$1",
+      "permanent": false
+    }
+  ]
+}
