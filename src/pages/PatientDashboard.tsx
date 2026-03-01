@@ -1,27 +1,32 @@
-import { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Header } from '@/components/layout/Header';
 import { ProgressRing } from '@/components/patient/ProgressRing';
 import { AlignerCard } from '@/components/patient/AlignerCard';
 import { MultiAngleCapture } from '@/components/patient/MultiAngleCapture';
+import { PhotoSyncStatus } from '@/components/patient/PhotoSyncStatus';
 import { AnalysisResult } from '@/components/patient/AnalysisResult';
-import { AnalysisProgressChart } from '@/components/patient/AnalysisProgressChart';
 import { AnalysisHistory } from '@/components/patient/AnalysisHistory';
 import { StatsOverview } from '@/components/patient/StatsOverview';
 import { Timeline } from '@/components/patient/Timeline';
 import { RemindersPanel } from '@/components/patient/RemindersPanel';
 import { PatientSchedule } from '@/components/patient/PatientSchedule';
-import { VideoTutorials } from '@/components/patient/VideoTutorials';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PhotoAnalysis, PhotoAngle } from '@/types/patient';
 import { ArrowLeft, Bell, History, Camera as CameraIcon, BarChart3, Loader2, PlayCircle, Timer } from 'lucide-react';
 import { WearTimeTracker } from '@/components/patient/WearTimeTracker';
+import { MobileTabBar } from '@/components/layout/MobileTabBar';
 import { format, addDays } from 'date-fns';
+
+// Lazy load heavy components — only loaded when their tab is active
+const AnalysisProgressChart = React.lazy(() => import('@/components/patient/AnalysisProgressChart').then(m => ({ default: m.AnalysisProgressChart })));
+const VideoTutorials = React.lazy(() => import('@/components/patient/VideoTutorials').then(m => ({ default: m.VideoTutorials })));
+
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { useAlignerAnalysis } from '@/hooks/useAlignerAnalysis';
-import { useMyPhotos, useSavePhoto } from '@/hooks/usePatientPhotos';
+import { useMyPhotos } from '@/hooks/usePatientPhotos';
+import { useOfflinePhotoQueue } from '@/hooks/useOfflinePhotoQueue';
 import { useConfirmAlignerChange } from '@/hooks/useAlignerChange';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -78,11 +83,10 @@ function useMyPatientData() {
 export default function PatientDashboard() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { analyzePhoto, isAnalyzing } = useAlignerAnalysis();
   const { data: photosData, isLoading: isLoadingPhotos } = useMyPhotos();
   const { data: patientData, isLoading: isLoadingPatient } = useMyPatientData();
   const { data: alertsData } = usePatientAlerts();
-  const savePhoto = useSavePhoto();
+  const { enqueue, pendingCount, isOnline, isSyncing } = useOfflinePhotoQueue();
   const confirmChange = useConfirmAlignerChange();
   
   const [latestAnalysis, setLatestAnalysis] = useState<PhotoAnalysis | null>(null);
@@ -113,41 +117,23 @@ export default function PatientDashboard() {
 
   const handlePhotosComplete = async (capturedPhotos: { angle: PhotoAngle; url: string }[]) => {
     console.log('Photos captured:', capturedPhotos.length);
-    
-    // Analyze the front photo with AI (Gemini)
-    const frontPhoto = capturedPhotos.find(p => p.angle === 'front') || capturedPhotos[0];
-    if (!frontPhoto) {
-      toast.error('Aucune photo à analyser');
+
+    if (!patientId || !patientData) {
+      toast.error('Aucun dossier patient — impossible de sauvegarder');
       return;
     }
 
-    toast.info('Analyse IA en cours...');
-    const analysis = await analyzePhoto(frontPhoto.url, patientData?.attachmentTeeth || []);
-    
-    if (analysis) {
-      setLatestAnalysis(analysis);
-      toast.success('Analyse terminée !');
-
-      // Save to database if we have a patient ID
-      if (patientId && patientData) {
-        for (const photo of capturedPhotos) {
-          await savePhoto.mutateAsync({
-            patientId,
-            photoDataUrl: photo.url,
-            angle: photo.angle,
-            alignerNumber: patientData.currentAligner,
-            analysisResult: photo.angle === frontPhoto.angle ? {
-              status: analysis.status,
-              attachmentStatus: analysis.attachmentStatus,
-              insertionQuality: analysis.insertionQuality,
-              gingivalHealth: analysis.gingivalHealth,
-              overallScore: analysis.overallScore,
-              recommendations: analysis.recommendations,
-              analyzedAt: analysis.analyzedAt,
-            } : undefined,
-          });
-        }
-      }
+    // Enqueue photos locally (instant) — sync service handles upload + analysis
+    try {
+      await enqueue({
+        patientId,
+        alignerNumber: patientData.currentAligner,
+        attachmentTeeth: (patientData.attachmentTeeth || []).map(String),
+        photos: capturedPhotos,
+      });
+    } catch (e) {
+      console.error('Enqueue error:', e);
+      toast.error('Erreur lors de l\'enregistrement local des photos');
     }
   };
 
@@ -172,15 +158,16 @@ export default function PatientDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100vh] bg-background">
       <Header 
         userType="patient" 
         userName={patientData.name}
         alertCount={alertsData?.unresolvedCount ?? 0}
+        alerts={alertsData?.alerts}
         onLogout={() => signOut()}
       />
       
-      <main className="container max-w-4xl py-6 px-4 space-y-6 animate-fade-in">
+      <main className="container max-w-4xl py-6 px-4 space-y-6 animate-fade-in pb-24">
         {/* Back button */}
         <Button 
           variant="ghost" 
@@ -238,7 +225,7 @@ export default function PatientDashboard() {
 
         {/* Tabs for different views */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="hidden md:grid w-full grid-cols-6">
             <TabsTrigger value="capture" className="gap-2">
               <CameraIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Capture</span>
@@ -276,21 +263,32 @@ export default function PatientDashboard() {
 
           {/* Capture Tab */}
           <TabsContent value="capture" className="space-y-6">
+            <PhotoSyncStatus />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <CameraIcon className="h-5 w-5 text-primary" />
                   Suivi photo
                 </h2>
-                <MultiAngleCapture onComplete={handlePhotosComplete} isAnalyzing={isAnalyzing || savePhoto.isPending} />
+                <MultiAngleCapture onComplete={handlePhotosComplete} isAnalyzing={isSyncing} />
               </div>
               
               <div>
                 <h2 className="text-lg font-semibold mb-4">Dernière analyse</h2>
-                {isAnalyzing ? (
+                {isSyncing ? (
                   <Card className="p-8 text-center glass-card">
                     <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin mb-3" />
-                    <p className="text-muted-foreground">Analyse IA en cours...</p>
+                    <p className="text-muted-foreground">Synchronisation et analyse IA en cours…</p>
+                  </Card>
+                ) : pendingCount > 0 ? (
+                  <Card className="p-8 text-center glass-card">
+                    <CameraIcon className="h-12 w-12 mx-auto text-amber-500 mb-3" />
+                    <p className="text-muted-foreground">
+                      {pendingCount} photo(s) en attente de synchronisation
+                    </p>
+                    {!isOnline && (
+                      <p className="text-xs text-amber-600 mt-1">Hors ligne — sync automatique au retour du réseau</p>
+                    )}
                   </Card>
                 ) : latestAnalysis ? (
                   <AnalysisResult analysis={latestAnalysis} />
@@ -312,7 +310,9 @@ export default function PatientDashboard() {
               <PlayCircle className="h-5 w-5 text-primary" />
               Bonnes pratiques
             </h2>
-            <VideoTutorials />
+            <Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+              <VideoTutorials />
+            </Suspense>
           </TabsContent>
 
           {/* Reminders Tab */}
@@ -369,7 +369,9 @@ export default function PatientDashboard() {
                 <Loader2 className="h-8 w-8 mx-auto text-primary animate-spin" />
               </Card>
             ) : (
-              <AnalysisProgressChart photos={photos} />
+              <Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+                <AnalysisProgressChart photos={photos} />
+              </Suspense>
             )}
           </TabsContent>
 
@@ -389,7 +391,24 @@ export default function PatientDashboard() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Bottom spacer for mobile nav */}
+        <div className="h-20 md:hidden" />
       </main>
+
+      {/* Mobile bottom tab bar */}
+      <MobileTabBar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabs={[
+          { value: 'capture', icon: <CameraIcon className="h-5 w-5" />, label: 'Capture' },
+          { value: 'wear', icon: <Timer className="h-5 w-5" />, label: 'Chrono' },
+          { value: 'reminders', icon: <Bell className="h-5 w-5" />, label: 'Rappels' },
+          { value: 'progress', icon: <BarChart3 className="h-5 w-5" />, label: 'Progrès' },
+          { value: 'history', icon: <History className="h-5 w-5" />, label: 'Historique' },
+          { value: 'videos', icon: <PlayCircle className="h-5 w-5" />, label: 'Vidéos' },
+        ]}
+      />
     </div>
   );
 }

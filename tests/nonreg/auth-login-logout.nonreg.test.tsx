@@ -5,16 +5,19 @@ import Auth from "@/pages/Auth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
 
-const toastMock = vi.fn();
+const toastErrorMock = vi.fn();
 
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-toast", () => ({
-  useToast: () => ({
-    toast: (...args: unknown[]) => toastMock(...args),
-  }),
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: (...args: unknown[]) => toastErrorMock(...args),
+    info: vi.fn(),
+    warning: vi.fn(),
+  },
 }));
 
 const mockedUseAuth = vi.mocked(useAuth);
@@ -100,11 +103,10 @@ describe("Auth login/logout flow (nonreg)", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(toastMock).toHaveBeenCalledWith(
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "Erreur de connexion",
         expect.objectContaining({
-          title: "Erreur de connexion",
           description: "Serveur Supabase inaccessible. Vérifie que Supabase local est démarré.",
-          variant: "destructive",
         })
       );
       expect(submitButton).not.toBeDisabled();

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface ProfileWithRole {
   id: string;
@@ -151,7 +151,6 @@ export function useAssignments() {
 
 export function useCreatePatient() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (data: {
@@ -184,24 +183,16 @@ export function useCreatePatient() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-patients'] });
-      toast({
-        title: 'Patient créé',
-        description: 'Le patient a été ajouté avec succès',
-      });
+      toast.success('Patient créé', { description: 'Le patient a été ajouté avec succès' });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Erreur',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast.error('Erreur', { description: error.message });
     },
   });
 }
 
 export function useCreatePractitioner() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (data: {
@@ -232,24 +223,16 @@ export function useCreatePractitioner() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-practitioners'] });
-      toast({
-        title: 'Praticien créé',
-        description: 'Le praticien a été ajouté avec succès',
-      });
+      toast.success('Praticien créé', { description: 'Le praticien a été ajouté avec succès' });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Erreur',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast.error('Erreur', { description: error.message });
     },
   });
 }
 
 export function useAssignPatient() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (data: {
@@ -289,8 +272,7 @@ export function useAssignPatient() {
     onSuccess: (_result) => {
       queryClient.invalidateQueries({ queryKey: ['admin-assignments'] });
       const emailSent = _result?.emailSent !== false;
-      toast({
-        title: 'Assignation créée',
+      toast.success('Assignation créée', {
         description: emailSent
           ? 'Le patient a été assigné et les emails ont été envoyés'
           : 'Le patient a été assigné (envoi des emails échoué)',
@@ -301,18 +283,13 @@ export function useAssignPatient() {
       if (error.message.includes('unique')) {
         message = 'Cette assignation existe déjà';
       }
-      toast({
-        title: 'Erreur',
-        description: message,
-        variant: 'destructive',
-      });
+      toast.error('Erreur', { description: message });
     },
   });
 }
 
 export function useRemoveAssignment() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (assignmentId: string) => {
@@ -326,24 +303,16 @@ export function useRemoveAssignment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-assignments'] });
-      toast({
-        title: 'Assignation supprimée',
-        description: 'L\'assignation a été retirée',
-      });
+      toast.success('Assignation supprimée', { description: 'L\'assignation a été retirée' });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Erreur',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast.error('Erreur', { description: error.message });
     },
   });
 }
 
 export function useUpdatePatient() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (data: {
@@ -388,24 +357,16 @@ export function useUpdatePatient() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-patients'] });
-      toast({
-        title: 'Patient modifié',
-        description: 'Les informations ont été mises à jour',
-      });
+      toast.success('Patient modifié', { description: 'Les informations ont été mises à jour' });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Erreur',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast.error('Erreur', { description: error.message });
     },
   });
 }
 
 export function useDeletePatient() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ profileId, userId }: { profileId: string; userId: string }) => {
@@ -422,24 +383,16 @@ export function useDeletePatient() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-patients'] });
       queryClient.invalidateQueries({ queryKey: ['admin-assignments'] });
-      toast({
-        title: 'Patient supprimé',
-        description: 'Le patient a été supprimé avec succès',
-      });
+      toast.success('Patient supprimé', { description: 'Le patient a été supprimé avec succès' });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Erreur',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast.error('Erreur', { description: error.message });
     },
   });
 }
 
 export function useUpdatePractitioner() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (data: {
@@ -476,24 +429,16 @@ export function useUpdatePractitioner() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-practitioners'] });
-      toast({
-        title: 'Praticien modifié',
-        description: 'Les informations ont été mises à jour',
-      });
+      toast.success('Praticien modifié', { description: 'Les informations ont été mises à jour' });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Erreur',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast.error('Erreur', { description: error.message });
     },
   });
 }
 
 export function useDeletePractitioner() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ profileId, userId }: { profileId: string; userId: string }) => {
@@ -510,17 +455,10 @@ export function useDeletePractitioner() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-practitioners'] });
       queryClient.invalidateQueries({ queryKey: ['admin-assignments'] });
-      toast({
-        title: 'Praticien supprimé',
-        description: 'Le praticien a été supprimé avec succès',
-      });
+      toast.success('Praticien supprimé', { description: 'Le praticien a été supprimé avec succès' });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Erreur',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast.error('Erreur', { description: error.message });
     },
   });
 }

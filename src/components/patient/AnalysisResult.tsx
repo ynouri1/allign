@@ -91,6 +91,14 @@ export function AnalysisResult({ analysis }: AnalysisResultProps) {
           </div>
         </div>
 
+        {/* Attachment Details */}
+        {analysis.attachmentDetails && (
+          <div className="bg-muted/50 border border-border rounded-lg p-4">
+            <p className="text-sm font-medium mb-1">Détail des taquets</p>
+            <p className="text-sm text-muted-foreground whitespace-pre-line">{analysis.attachmentDetails}</p>
+          </div>
+        )}
+
         {/* Recommendations */}
         {analysis.recommendations.length > 0 && (
           <div className="bg-info/10 border border-info/20 rounded-lg p-4">

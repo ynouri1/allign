@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0D9488"/>
+  <g transform="translate(256,240)">
+    <!-- Smile arc -->
+    <path d="M-100,20 Q0,100 100,20" fill="none" stroke="white" stroke-width="18" stroke-linecap="round"/>
+    <!-- Teeth marks -->
+    <rect x="-80" y="-10" width="22" height="32" rx="4" fill="white" opacity="0.9"/>
+    <rect x="-50" y="-16" width="22" height="38" rx="4" fill="white" opacity="0.9"/>
+    <rect x="-20" y="-18" width="22" height="40" rx="4" fill="white" opacity="0.9"/>
+    <rect x="10"  y="-18" width="22" height="40" rx="4" fill="white" opacity="0.9"/>
+    <rect x="40"  y="-16" width="22" height="38" rx="4" fill="white" opacity="0.9"/>
+    <rect x="70"  y="-10" width="22" height="32" rx="4" fill="white" opacity="0.9"/>
+    <!-- Aligner outline -->
+    <path d="M-110,0 Q-120,-60 -80,-80 Q0,-120 80,-80 Q120,-60 110,0" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+  </g>
+  <text x="256" y="420" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="56" fill="white">alignbygn</text>
+</svg>

@@ -7,7 +7,7 @@ Ce document décrit une stratégie mobile pragmatique pour rendre le projet util
 ### Niveau 1 — PWA (rapide, faible coût, impact immédiat)
 - Objectif: expérience mobile web installable (Android + iOS Safari partiel)
 - Avantages: pas de réécriture, mise en production rapide, maintenance unique
-- Limites: accès caméra/background plus limité qu’une app native
+- Limites: accès caméra/background plus limité qu'une app native
 
 ### Niveau 2 — Wrapper mobile (Capacitor) pour stores
 - Objectif: publier sur App Store / Play Store avec la base React existante
@@ -19,72 +19,103 @@ Ce document décrit une stratégie mobile pragmatique pour rendre le projet util
 - Avantages: meilleure ergonomie et robustesse mobile
 - Limites: coût et complexité élevés
 
-## 2) Étapes d’implémentation détaillées
+## 2) Étapes d'implémentation détaillées
 
-## Phase A — Baseline mobile web (1 à 2 semaines)
+## Phase A — Baseline mobile web ✅ DONE (complet)
 1. Audit responsive des pages clés
    - Cibles: `patient`, `practitioner-new`, `admin`, `auth`
    - Vérifier: lisibilité, touch targets >= 44px, navigation tab mobile
+   - [x] Audit complet effectué (25/02/2026)
 2. Stabiliser viewport et zones safe-area
-   - iOS notch, Android gesture bar
+   - [x] `viewport-fit=cover` ajouté dans `index.html`
+   - [x] Safe-area CSS `env(safe-area-inset-*)` sur `<html>` et header
+   - [x] iOS notch, Android gesture bar
 3. Optimiser perf mobile
-   - Lazy load composants lourds (graphiques/3D)
-   - Réduire JS initial et poids assets vidéos
+   - [x] Lazy load toutes les pages via `React.lazy()` + `Suspense` (code splitting)
+   - [x] Suppression `App.css` mort (scaffold Vite)
+   - [x] Fix ordre `@import` CSS
+   - [x] Réduire JS initial et poids assets vidéos (lazy load vidéos à la demande via `new URL()` pattern)
+   - [x] Lazy load composants lourds (3D TeethViewer, graphiques, VideoTutorials via `React.lazy()`)
 4. QA device matrix
-   - iPhone récent + Android milieu de gamme + tablette
+   - [ ] iPhone récent + Android milieu de gamme + tablette
 
-## Phase B — PWA production (1 semaine)
-1. Ajouter manifeste web app
-   - `name`, `short_name`, `icons`, `theme_color`, `display: standalone`
-2. Ajouter service worker
-   - Cache shell + stratégies réseau API/media
-3. Implémenter offline limité
-   - File d’attente des actions non critiques (ex: brouillons)
-4. Écran d’installation et fallback offline
-5. Tester Lighthouse PWA et accessibilité
+## Phase B — PWA production ✅ DONE
+1. Manifeste web app
+   - [x] `vite-plugin-pwa` configuré avec manifest complet
+   - [x] `name`, `short_name`, `icons`, `theme_color`, `background_color`, `display: standalone`, `orientation: portrait`
+2. Icônes PWA
+   - [x] SVG source créé (`public/icon.svg`)
+   - [x] 192x192, 512x512 PNG générés via script sharp
+   - [x] Icône maskable 512x512
+   - [x] `apple-touch-icon.png` 180x180
+   - [x] Meta tags iOS: `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`
+   - [x] `<meta name="theme-color">` ajouté
+3. Service worker
+   - [x] Workbox via `vite-plugin-pwa` (mode `generateSW`, `autoUpdate`)
+   - [x] Précache 42 assets (shell + JS/CSS/images)
+   - [x] Runtime caching: `NetworkFirst` pour API, `CacheFirst` pour images
+4. Navigation mobile
+   - [x] `MobileTabBar` fixe en bas (6 onglets patient, icônes + labels, min 56px touch)
+   - [x] `TabsList` classique masqué sur mobile (`hidden md:grid`)
+   - [x] Bottom spacer pour éviter le recouvrement du contenu
+5. Offline limité
+   - [ ] File d'attente des actions non critiques (brouillons photos)
+   - [x] Écran fallback offline (`public/offline.html` + workbox `navigateFallback`)
+6. Tests Lighthouse
+   - [ ] Score PWA Lighthouse
+   - [ ] Score accessibilité
 
-## Phase C — Capacitor (2 à 3 semaines)
+## Phase C — Capacitor ✅ DONE
 1. Initialiser Capacitor
-   - `npx cap init` puis plateformes iOS/Android
+   - [x] `capacitor.config.ts` créé (appId: `com.alignbygn.app`, webDir: `dist`)
+   - [x] `@capacitor/core`, `@capacitor/cli` installés
+   - [x] Plateformes Android (`android/`) et iOS (`ios/`) ajoutées
 2. Brancher build web existant
-   - sortie Vite vers dossier consommé par Capacitor
+   - [x] Sortie Vite `dist/` consommée par Capacitor (`npx cap sync`)
+   - [x] 7 plugins Capacitor détectés et synchronisés
+   - [x] Scripts npm ajoutés: `cap:sync`, `cap:build`, `cap:android`, `cap:ios`, `cap:run:android`, `cap:run:ios`, `cap:livereload`
 3. Permissions natives
-   - caméra, photos, stockage selon besoin clinique
+   - [x] Android: `CAMERA`, `READ_MEDIA_IMAGES`, `READ/WRITE_EXTERNAL_STORAGE` (legacy)
+   - [x] iOS: `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`, `NSPhotoLibraryAddUsageDescription`
+   - [x] Plugins: `@capacitor/camera`, `@capacitor/filesystem`, `@capacitor/splash-screen`, `@capacitor/status-bar`, `@capacitor/haptics`, `@capacitor/app`, `@capacitor/keyboard`
 4. Adapter capture photo mobile
-   - préférer plugins natifs quand navigateur mobile est instable
+   - [x] `src/lib/capacitor.ts` — détection plateforme (isNative, isIOS, isAndroid, isWeb)
+   - [x] `src/hooks/useNativeCamera.ts` — hook unifié camera native (takePhoto, pickFromGallery, checkPermissions)
+   - [x] `MultiAngleCapture.tsx` adapté: caméra native sur Capacitor, flux web (`getUserMedia`) sur navigateur
+   - [x] `main.tsx` — initialisation StatusBar, SplashScreen, Keyboard sur natif
 5. Packaging store
-   - signatures, icônes splash, privacy manifest, textes stores
+   - [ ] Signatures, icônes splash, privacy manifest, textes stores
 
-## Phase D — Durcissement santé/production (continu)
+## Phase D — Durcissement santé/production ⬜ TODO
 1. Sécurité
-   - rotation tokens, durées session adaptées mobile
-   - chiffrement local minimal, pas de données patient en clair
+   - [ ] Rotation tokens, durées session adaptées mobile
+   - [ ] Chiffrement local minimal, pas de données patient en clair
 2. Observabilité
-   - logs mobiles structurés + crash reporting
+   - [ ] Logs mobiles structurés + crash reporting
 3. Conformité
-   - bannière consentement, rétention, suppression données
+   - [ ] Bannière consentement, rétention, suppression données
 4. Tests non-régression mobile
-   - parcours: login, capture, analyse, alertes, changement aligneur
+   - [ ] Parcours: login, capture, analyse, alertes, changement aligneur
 
 ## 3) Backlog technique recommandé
 
 Priorité haute:
-- Rendre la capture photo robuste sur iOS Safari et Android Chrome
-- Réduire le bundle initial et charger vidéos à la demande
-- Gérer états réseau faible/intermittent
+- [x] Rendre la capture photo robuste sur iOS Safari et Android Chrome (Capacitor natif intégré)
+- [x] Réduire le bundle initial et charger vidéos à la demande
+- [ ] Gérer états réseau faible/intermittent
 
 Priorité moyenne:
-- Notifications push (rappels patient)
-- Synchronisation background contrôlée
+- [ ] Notifications push (rappels patient)
+- [ ] Synchronisation background contrôlée
 
 Priorité basse:
-- Fonctionnalités natives avancées (widgets, intents, etc.)
+- [ ] Fonctionnalités natives avancées (widgets, intents, etc.)
 
 ## 4) KPI de succès mobile
 
 - Taux de complétion capture photo (mobile)
 - Temps moyen pour soumettre une session photo
-- Taux d’erreur upload/analyse sur réseau cellulaire
+- Taux d'erreur upload/analyse sur réseau cellulaire
 - Crash-free sessions (si wrapper)
 - Conversion installation PWA / app
 

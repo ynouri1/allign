@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
-import { Camera, X, Volume2, VolumeX, HelpCircle, Upload, ImageIcon } from 'lucide-react';
+import { Camera, X, Volume2, VolumeX, HelpCircle, Upload, ImageIcon, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PhotoAngle, PHOTO_ANGLES } from '@/types/patient';
 import { PhotoTutorial } from './PhotoTutorial';
@@ -10,6 +10,8 @@ import { PhotoGuideOverlay } from './PhotoGuideOverlay';
 import { PhotoQualityCheck } from './PhotoQualityCheck';
 import { usePhotoAnalysis } from '@/hooks/usePhotoAnalysis';
 import { useSpeechGuidance } from '@/hooks/useSpeechGuidance';
+import { useNativeCamera } from '@/hooks/useNativeCamera';
+import { isNative } from '@/lib/capacitor';
 
 interface CapturedPhoto {
   angle: PhotoAngle;
@@ -43,6 +45,7 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
 
   const { analyzeVideoFrame } = usePhotoAnalysis();
   const { isEnabled: voiceEnabled, toggle: toggleVoice, guidance, isSupported: voiceSupported } = useSpeechGuidance();
+  const { available: nativeCameraAvailable, takePhoto: nativeTakePhoto, pickFromGallery: nativePickFromGallery } = useNativeCamera();
 
   const currentAngle = PHOTO_ANGLES[currentAngleIndex];
   const requiredAngles = PHOTO_ANGLES.filter(a => a.required);
@@ -119,6 +122,37 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
     }
   };
 
+  // ----- Native Capacitor capture (no live preview, uses system camera) -----
+  const handleNativeCapture = useCallback(async () => {
+    if (!nativeCameraAvailable) return;
+    try {
+      setIsCapturing(true);
+      if (voiceEnabled) guidance.holdStill();
+      const result = await nativeTakePhoto();
+      setPreviewUrl(result.dataUrl);
+      if (voiceEnabled) guidance.captured();
+    } catch (err) {
+      console.error('Erreur capture native:', err);
+    } finally {
+      setIsCapturing(false);
+    }
+  }, [nativeCameraAvailable, nativeTakePhoto, voiceEnabled, guidance]);
+
+  const handleNativeGallery = useCallback(async () => {
+    if (!nativeCameraAvailable) return;
+    try {
+      const result = await nativePickFromGallery();
+      setIsGalleryImport(true);
+      setPreviewUrl(result.dataUrl);
+      setCurrentAngleIndex(0);
+      setCapturedPhotos([]);
+      setIsOpen(true);
+    } catch (err) {
+      console.error('Erreur galerie native:', err);
+    }
+  }, [nativeCameraAvailable, nativePickFromGallery]);
+
+  // ----- Web capture (live preview with getUserMedia) -----
   // Countdown and capture
   const startCountdown = () => {
     if (voiceEnabled) guidance.holdStill();
@@ -137,7 +171,7 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
     }, 1000);
   };
 
-  // Capture photo
+  // Capture photo (web only — canvas snapshot from <video>)
   const capturePhoto = () => {
     if (!videoRef.current) return;
 
@@ -254,20 +288,40 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
       <div className="grid grid-cols-2 gap-3">
         <Card 
           className="group cursor-pointer border-2 border-dashed border-primary/30 hover:border-primary/60 transition-all duration-300 p-6 flex flex-col items-center justify-center gap-3 bg-primary/5 hover:bg-primary/10"
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            if (nativeCameraAvailable) {
+              // On native: open system camera directly, then show preview dialog
+              setIsOpen(true);
+            } else {
+              // On web: open dialog with live getUserMedia preview
+              setIsOpen(true);
+            }
+          }}
         >
           <div className="h-12 w-12 rounded-xl gradient-primary flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-            <Camera className="h-6 w-6 text-primary-foreground" />
+            {nativeCameraAvailable ? (
+              <Smartphone className="h-6 w-6 text-primary-foreground" />
+            ) : (
+              <Camera className="h-6 w-6 text-primary-foreground" />
+            )}
           </div>
           <div className="text-center">
             <p className="font-medium text-foreground text-sm">Caméra</p>
-            <p className="text-xs text-muted-foreground">Capture guidée</p>
+            <p className="text-xs text-muted-foreground">
+              {nativeCameraAvailable ? 'Capture native' : 'Capture guidée'}
+            </p>
           </div>
         </Card>
 
         <Card 
           className="group cursor-pointer border-2 border-dashed border-secondary/50 hover:border-secondary transition-all duration-300 p-6 flex flex-col items-center justify-center gap-3 bg-secondary/5 hover:bg-secondary/10"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => {
+            if (nativeCameraAvailable) {
+              handleNativeGallery();
+            } else {
+              fileInputRef.current?.click();
+            }
+          }}
         >
           <div className="h-12 w-12 rounded-xl bg-secondary flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
             <ImageIcon className="h-6 w-6 text-secondary-foreground" />
@@ -387,15 +441,27 @@ export function MultiAngleCapture({ onComplete, isAnalyzing = false }: MultiAngl
 
               {/* Capture button */}
               <div className="flex gap-3">
-                <Button 
-                  variant="gradient" 
-                  onClick={startCountdown} 
-                  className="flex-1 h-14 text-lg gap-3"
-                  disabled={countdown !== null || isAnalyzing}
-                >
-                  <Camera className="h-6 w-6" />
-                  Capturer
-                </Button>
+                {nativeCameraAvailable ? (
+                  <Button 
+                    variant="gradient" 
+                    onClick={handleNativeCapture} 
+                    className="flex-1 h-14 text-lg gap-3"
+                    disabled={isCapturing || isAnalyzing}
+                  >
+                    <Smartphone className="h-6 w-6" />
+                    Capturer
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="gradient" 
+                    onClick={startCountdown} 
+                    className="flex-1 h-14 text-lg gap-3"
+                    disabled={countdown !== null || isAnalyzing}
+                  >
+                    <Camera className="h-6 w-6" />
+                    Capturer
+                  </Button>
+                )}
               </div>
 
               {/* Tips */}

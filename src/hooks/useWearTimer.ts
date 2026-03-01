@@ -261,7 +261,12 @@ export function useWearTimer(patientId: string | undefined) {
   }, [isRunning, stopMutation]);
 
   const setReminderMinutes = useCallback(async (minutes: number) => {
-    await requestNotificationPermission();
+    const granted = await requestNotificationPermission();
+    if (!granted) {
+      toast.warning('Notifications désactivées', {
+        description: 'Activez les notifications dans les paramètres de votre navigateur pour recevoir le rappel.',
+      });
+    }
     const fireAt = Date.now() + minutes * 60_000;
     const label = `Pause de ${minutes} min terminée — remettez votre gouttière !`;
     const cache: ReminderCache = { fireAt, label };

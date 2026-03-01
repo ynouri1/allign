@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -82,14 +82,44 @@ async function getSignedUrl(photoUrl: string): Promise<string> {
 
 export function usePractitionerAlerts() {
   const queryClient = useQueryClient();
+  const [practitionerId, setPractitionerId] = useState<string | null>(null);
 
-  // Realtime: auto-refresh when alerts change in DB
+  // Resolve practitioner_id once
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled || !user) return;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      if (cancelled || !profile) return;
+      const { data: practitioner } = await supabase
+        .from('practitioners')
+        .select('id')
+        .eq('profile_id', profile.id)
+        .single();
+      if (!cancelled && practitioner) setPractitionerId(practitioner.id);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Realtime: only listen to changes for THIS practitioner
+  useEffect(() => {
+    if (!practitionerId) return;
+
     const channel = supabase
       .channel('practitioner-alerts-realtime')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'practitioner_alerts' },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'practitioner_alerts',
+          filter: `practitioner_id=eq.${practitionerId}`,
+        },
         () => {
           queryClient.invalidateQueries({ queryKey: ['practitioner-alerts'] });
         }
@@ -107,7 +137,7 @@ export function usePractitionerAlerts() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [practitionerId, queryClient]);
 
   return useQuery({
     queryKey: ['practitioner-alerts'],

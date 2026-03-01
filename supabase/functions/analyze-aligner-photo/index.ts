@@ -97,7 +97,7 @@ function uint8ToBase64(bytes: Uint8Array): string {
 
 async function resolveImageInput(imageBase64?: string, imageUrl?: string): Promise<{ mimeType: string; data: string } | null> {
   if (imageBase64) {
-    const dataUrlMatch = imageBase64.match(/^data:(.+);base64,(.+)$/);
+    const dataUrlMatch = imageBase64.match(/^data:([^;]+);base64,(.+)$/);
     if (dataUrlMatch) {
       return {
         mimeType: dataUrlMatch[1] || "image/jpeg",
@@ -196,7 +196,6 @@ serve(async (req) => {
     }
 
     console.log("Analyzing aligner photo with Gemini...");
-    console.log("Attachment teeth provided:", attachmentTeeth);
 
     const imageInput = await resolveImageInput(imageBase64, imageUrl);
     if (!imageInput) {
@@ -210,76 +209,100 @@ serve(async (req) => {
     const teethInfo = formatTeethForPrompt(attachmentTeeth);
     const hasSpecificTeeth = attachmentTeeth && attachmentTeeth.length > 0;
 
-const systemPrompt = `Tu es un assistant médical TRÈS STRICT spécialisé dans l'analyse de photos d'aligneurs dentaires (gouttières orthodontiques).
+    // ── System instruction (séparée du contenu utilisateur) ─────────────
+    const systemInstruction = `Tu es un assistant médical STRICT spécialisé dans l'analyse de photos d'aligneurs dentaires (gouttières orthodontiques).
 
-**RÈGLE CRITIQUE**: Tu dois être EXTRÊMEMENT VIGILANT et signaler le MOINDRE problème visible. En cas de doute, TOUJOURS signaler un problème potentiel plutôt que de dire que tout va bien. La sécurité du patient prime.
+RÈGLES:
+- En cas de doute, signale un problème potentiel plutôt que de dire que tout va bien.
+- La sécurité du patient prime toujours.
+- Évalue UNIQUEMENT ce qui est visible sur la photo. Ne suppose rien.
 
-**INFORMATIONS SUR LES TAQUETS DU PATIENT:**
+INFORMATIONS SUR LES TAQUETS DU PATIENT:
 ${teethInfo}
 
-Analyse l'image fournie avec une attention MAXIMALE sur les dents indiquées ci-dessus et évalue les critères suivants:
+CRITÈRES D'ÉVALUATION:
 
-1. **État des taquets (attachments)**: ${hasSpecificTeeth 
-  ? `Examine ATTENTIVEMENT chaque dent: ${attachmentTeeth.join(', ')}. Les taquets sont-ils TOUS clairement visibles et parfaitement en place?`
-  : 'Les taquets collés sur les dents sont-ils tous présents et bien en place?'}
-   - "ok": TOUS les taquets sont CLAIREMENT visibles, parfaitement positionnés, aucun doute
-   - "partial": Le MOINDRE doute sur un taquet = partial. Taquet partiellement visible, légèrement décollé, ou position incertaine
-   - "missing": Un ou plusieurs taquets clairement absents ou invisibles
+1. attachmentStatus — État des taquets (attachments)
+${hasSpecificTeeth
+  ? `   Examine chaque dent: ${attachmentTeeth.join(', ')}.`
+  : '   Vérifie les taquets visibles.'}
+   - "ok": tous les taquets clairement visibles et bien en place
+   - "partial": doute sur un taquet, partiellement visible ou légèrement décollé
+   - "missing": un ou plusieurs taquets clairement absents
 
-2. **Qualité d'insertion de la gouttière**: EXAMINE TRÈS ATTENTIVEMENT si la gouttière est parfaitement insérée.
-   - "good": La gouttière épouse PARFAITEMENT les dents, AUCUN espace visible nulle part, insertion complète et homogène
-   - "acceptable": Le MOINDRE espace visible, même minime, entre la gouttière et une dent = acceptable (pas good!)
-   - "poor": Espace clairement visible, gouttière décalée, mal positionnée, ou soulevée même partiellement sur UNE dent
+2. insertionQuality — Qualité d'insertion de la gouttière
+   - "good": la gouttière épouse parfaitement les dents, aucun espace visible
+   - "acceptable": léger espace visible entre la gouttière et une dent
+   - "poor": espace clairement visible, gouttière décalée ou soulevée
 
-   **CRITÈRES D'ALERTE pour insertion "poor":**
-   - Gouttière qui ne descend pas complètement sur les dents
-   - Bord de la gouttière visible au-dessus de la ligne gingivale
-   - Espace/gap entre le plastique et la surface dentaire
-   - Gouttière qui semble "flotter" ou ne pas adhérer
+3. gingivalHealth — Santé gingivale (évaluation modérée)
+   - "healthy": gencives roses, pas de gonflement
+   - "mild_inflammation": rougeur localisée clairement visible OU gonflement léger distinct
+   - "inflammation": rougeur marquée étendue, gonflement évident ou saignement
 
-3. **Santé gingivale**: État des gencives visibles (ÉVALUATION MODÉRÉE)
-   - "healthy": Gencives roses à légèrement rosées, variations de couleur mineures acceptables, pas de gonflement visible
-   - "mild_inflammation": Rougeur CLAIREMENT visible et localisée (pas juste une légère variation de teinte), OU gonflement léger mais distinct
-   - "inflammation": Rougeur marquée étendue, gonflement évident, saignement apparent
+4. overallScore — Score global de 0 à 100 (conservateur)
+   - Problème d'insertion → max 60
+   - Taquet manquant/partial → max 50
+   - Inflammation → max 55
+   - Cumul → réduire davantage
+   - Tout normal = 75-95
 
-4. **Score global**: Score CONSERVATEUR de 0 à 100. En cas de TOUT problème détecté:
-   - Problème d'insertion = score max 60
-   - Taquet manquant/partial = score max 50
-   - Inflammation = score max 55
-   - Cumul de problèmes = réduire encore plus
+5. recommendations — Liste de conseils. Si problème détecté, recommander de contacter le praticien.
 
-5. **Recommandations**: OBLIGATOIRE: si tu détectes un problème, recommande de contacter le praticien.
+6. attachmentDetails — ${hasSpecificTeeth
+  ? `Pour CHAQUE dent (${attachmentTeeth.join(', ')}), décris ce que tu observes.`
+  : 'Décris l\'état de chaque taquet visible.'}`;
 
-6. **Détails des taquets**: ${hasSpecificTeeth 
-  ? `Pour CHAQUE dent (${attachmentTeeth.join(', ')}), décris précisément ce que tu observes.`
-  : 'Décris l\'état de chaque taquet visible.'}
+    // ── User prompt ─────────────────────────────────────────────────────────
+    const userPrompt = hasSpecificTeeth
+      ? `Analyse cette photo d'aligneur dentaire. Concentre-toi sur les dents ${attachmentTeeth.join(', ')} qui portent des taquets.`
+      : "Analyse cette photo d'aligneur dentaire.";
 
-**RAPPEL**: Il vaut MIEUX signaler un faux positif qu'ignorer un vrai problème. Sois STRICT dans ton évaluation.
+    // ── JSON Schema for structured output ──────────────────────────────────
+    const responseSchema = {
+      type: "OBJECT",
+      properties: {
+        attachmentStatus: {
+          type: "STRING",
+          enum: ["ok", "partial", "missing"],
+        },
+        insertionQuality: {
+          type: "STRING",
+          enum: ["good", "acceptable", "poor"],
+        },
+        gingivalHealth: {
+          type: "STRING",
+          enum: ["healthy", "mild_inflammation", "inflammation"],
+        },
+        overallScore: {
+          type: "INTEGER",
+        },
+        recommendations: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+        },
+        attachmentDetails: {
+          type: "STRING",
+        },
+      },
+      required: ["attachmentStatus", "insertionQuality", "gingivalHealth", "overallScore", "recommendations", "attachmentDetails"],
+    };
 
-Réponds UNIQUEMENT avec un JSON valide sans markdown, en suivant exactement ce format:
-{
-  "attachmentStatus": "ok" | "partial" | "missing",
-  "insertionQuality": "good" | "acceptable" | "poor",
-  "gingivalHealth": "healthy" | "mild_inflammation" | "inflammation",
-  "overallScore": number,
-  "recommendations": ["conseil 1", "conseil 2"],
-  "attachmentDetails": "Description de l'état des taquets sur les dents spécifiées"
-}`;
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    // ── Gemini API call ────────────────────────────────────────────────────
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_API_KEY,
       },
       body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: systemInstruction }],
+        },
         contents: [
           {
             parts: [
-              {
-                text: `${systemPrompt}\n\n${hasSpecificTeeth
-                  ? `Analyse cette photo d'aligneur dentaire. Concentre-toi particulièrement sur les dents ${attachmentTeeth.join(', ')} qui portent des taquets. Fournis ton évaluation en JSON.`
-                  : "Analyse cette photo d'aligneur dentaire et fournis ton évaluation en JSON."}`,
-              },
+              { text: userPrompt },
               {
                 inline_data: {
                   mime_type: imageInput.mimeType,
@@ -290,7 +313,9 @@ Réponds UNIQUEMENT avec un JSON valide sans markdown, en suivant exactement ce 
           },
         ],
         generationConfig: {
+          temperature: 0,
           responseMimeType: "application/json",
+          responseSchema,
         },
       }),
     });
@@ -355,36 +380,61 @@ Réponds UNIQUEMENT avec un JSON valide sans markdown, en suivant exactement ce 
       );
     }
 
-    console.log("AI response content:", content);
-
     // Parse the JSON response from Gemini
     let analysis;
     try {
-      // Remove potential markdown code blocks
+      // Remove potential markdown code blocks (safety net)
       const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       analysis = JSON.parse(cleanContent);
     } catch (parseError) {
-      console.error("Failed to parse AI response:", parseError, content);
+      console.error("Failed to parse AI response:", parseError);
       return new Response(
         JSON.stringify({ error: "Erreur de parsing de la réponse AI" }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate and structure the response
+    // ── Validate enums (fail-safe: reject unknown values) ──────────────
+    const VALID_ATTACHMENT = ["ok", "partial", "missing"] as const;
+    const VALID_INSERTION  = ["good", "acceptable", "poor"] as const;
+    const VALID_GINGIVAL   = ["healthy", "mild_inflammation", "inflammation"] as const;
+
+    const attachmentStatus = VALID_ATTACHMENT.includes(analysis.attachmentStatus)
+      ? analysis.attachmentStatus : null;
+    const insertionQuality = VALID_INSERTION.includes(analysis.insertionQuality)
+      ? analysis.insertionQuality : null;
+    const gingivalHealth = VALID_GINGIVAL.includes(analysis.gingivalHealth)
+      ? analysis.gingivalHealth : null;
+    const overallScore = typeof analysis.overallScore === 'number'
+      ? Math.max(0, Math.min(100, Math.round(analysis.overallScore))) : null;
+
+    // If any required field is invalid → return error (not fake "ok")
+    if (!attachmentStatus || !insertionQuality || !gingivalHealth || overallScore === null) {
+      console.error("AI returned invalid field values:", {
+        attachmentStatus: analysis.attachmentStatus,
+        insertionQuality: analysis.insertionQuality,
+        gingivalHealth: analysis.gingivalHealth,
+        overallScore: analysis.overallScore,
+      });
+      return new Response(
+        JSON.stringify({ error: "L'IA a renvoyé des valeurs invalides. Réessayez." }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const result = {
       status: 'analyzed',
-      attachmentStatus: analysis.attachmentStatus || 'ok',
-      insertionQuality: analysis.insertionQuality || 'good',
-      gingivalHealth: analysis.gingivalHealth || 'healthy',
-      overallScore: typeof analysis.overallScore === 'number' ? analysis.overallScore : 70,
+      attachmentStatus,
+      insertionQuality,
+      gingivalHealth,
+      overallScore,
       recommendations: Array.isArray(analysis.recommendations) ? analysis.recommendations : [],
-      attachmentDetails: analysis.attachmentDetails || null,
+      attachmentDetails: typeof analysis.attachmentDetails === 'string' ? analysis.attachmentDetails : null,
       teethAnalyzed: attachmentTeeth,
       analyzedAt: new Date().toISOString(),
     };
 
-    console.log("Analysis result:", result);
+    console.log("Analysis complete — score:", result.overallScore);
 
     return new Response(
       JSON.stringify(result),

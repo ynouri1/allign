@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { Loader2, Mail, Lock, Smile, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
@@ -24,7 +24,6 @@ const Auth = () => {
   
   const { signIn, user, loading } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && user) {
@@ -59,14 +58,12 @@ const Auth = () => {
 
       if (error) {
         const isNetworkError = /fetch|network|failed to fetch|load failed/i.test(error.message || '');
-        toast({
-          title: 'Erreur de connexion',
+        toast.error('Erreur de connexion', {
           description: isNetworkError
             ? 'Serveur Supabase inaccessible. Vérifie que Supabase local est démarré.'
             : error.message === 'Invalid login credentials'
               ? 'Email ou mot de passe incorrect'
               : error.message,
-          variant: 'destructive',
         });
       } else {
         navigate('/');
@@ -80,7 +77,7 @@ const Auth = () => {
     e.preventDefault();
     const result = emailSchema.safeParse(forgotEmail);
     if (!result.success) {
-      toast({ title: 'Email invalide', description: result.error.errors[0].message, variant: 'destructive' });
+      toast.error('Email invalide', { description: result.error.errors[0].message });
       return;
     }
     setForgotLoading(true);
@@ -90,20 +87,17 @@ const Auth = () => {
       });
       if (error) throw error;
       if (data?.error) {
-        toast({ title: 'Erreur', description: data.error, variant: 'destructive' });
+        toast.error('Erreur', { description: data.error });
       } else {
-        toast({
-          title: 'Email envoyé',
+        toast.success('Email envoyé', {
           description: 'Si un compte existe avec cet email, un nouveau mot de passe vous sera envoyé.',
         });
         setShowForgot(false);
         setForgotEmail('');
       }
     } catch (err) {
-      toast({
-        title: 'Erreur',
+      toast.error('Erreur', {
         description: err instanceof Error ? err.message : 'Une erreur est survenue',
-        variant: 'destructive',
       });
     } finally {
       setForgotLoading(false);

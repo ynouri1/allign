@@ -5,12 +5,16 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import insertionVideo from '@/assets/videos/aligner-insertion-tutorial.mp4';
-import removalVideo from '@/assets/videos/aligner-removal-tutorial.mp4';
-import cleaningVideo from '@/assets/videos/aligner-cleaning-tutorial.mp4';
-import dailyWearVideo from '@/assets/videos/aligner-daily-wear-tips.mp4';
-import painReliefVideo from '@/assets/videos/aligner-pain-relief.mp4';
-import eatingDrinkingVideo from '@/assets/videos/aligner-eating-drinking.mp4';
+
+// Lazy video map — URLs resolved at build time but files only fetched when played
+const videoMap: Record<string, string> = {
+  'default-1': new URL('@/assets/videos/aligner-insertion-tutorial.mp4', import.meta.url).href,
+  'default-2': new URL('@/assets/videos/aligner-removal-tutorial.mp4', import.meta.url).href,
+  'default-3': new URL('@/assets/videos/aligner-cleaning-tutorial.mp4', import.meta.url).href,
+  'default-4': new URL('@/assets/videos/aligner-daily-wear-tips.mp4', import.meta.url).href,
+  'default-5': new URL('@/assets/videos/aligner-pain-relief.mp4', import.meta.url).href,
+  'default-6': new URL('@/assets/videos/aligner-eating-drinking.mp4', import.meta.url).href,
+};
 
 interface Video {
   id: string;
@@ -31,7 +35,7 @@ const defaultVideos: Video[] = [
     description: 'Apprenez la technique correcte pour mettre vos aligneurs en place sans les abîmer.',
     duration: '0:05',
     thumbnail: 'https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=400&h=225&fit=crop',
-    videoUrl: insertionVideo,
+    videoUrl: videoMap['default-1'],
     isLocalVideo: true,
     category: 'insertion',
   },
@@ -41,7 +45,7 @@ const defaultVideos: Video[] = [
     description: 'La bonne méthode pour enlever vos gouttières sans douleur ni dommage.',
     duration: '0:05',
     thumbnail: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=400&h=225&fit=crop',
-    videoUrl: removalVideo,
+    videoUrl: videoMap['default-2'],
     isLocalVideo: true,
     category: 'retrait',
   },
@@ -51,7 +55,7 @@ const defaultVideos: Video[] = [
     description: 'Gardez vos aligneurs propres et transparents avec ces conseils d\'hygiène.',
     duration: '0:05',
     thumbnail: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=225&fit=crop',
-    videoUrl: cleaningVideo,
+    videoUrl: videoMap['default-3'],
     isLocalVideo: true,
     category: 'hygiene',
   },
@@ -61,7 +65,7 @@ const defaultVideos: Video[] = [
     description: 'Comment atteindre les 22 heures de port quotidien recommandées.',
     duration: '0:05',
     thumbnail: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=400&h=225&fit=crop',
-    videoUrl: dailyWearVideo,
+    videoUrl: videoMap['default-4'],
     isLocalVideo: true,
     category: 'conseils',
   },
@@ -71,7 +75,7 @@ const defaultVideos: Video[] = [
     description: 'Conseils pour soulager l\'inconfort lors du changement de gouttière.',
     duration: '0:05',
     thumbnail: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=225&fit=crop',
-    videoUrl: painReliefVideo,
+    videoUrl: videoMap['default-5'],
     isLocalVideo: true,
     category: 'conseils',
   },
@@ -81,7 +85,7 @@ const defaultVideos: Video[] = [
     description: 'Ce qu\'il faut savoir sur l\'alimentation pendant votre traitement.',
     duration: '0:05',
     thumbnail: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=225&fit=crop',
-    videoUrl: eatingDrinkingVideo,
+    videoUrl: videoMap['default-6'],
     isLocalVideo: true,
     category: 'conseils',
   },

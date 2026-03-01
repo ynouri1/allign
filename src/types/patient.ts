@@ -40,6 +40,7 @@ export interface PhotoAnalysis {
   gingivalHealth: 'healthy' | 'mild_inflammation' | 'inflammation';
   overallScore: number;
   recommendations: string[];
+  attachmentDetails?: string;
   analyzedAt: Date;
 }
 

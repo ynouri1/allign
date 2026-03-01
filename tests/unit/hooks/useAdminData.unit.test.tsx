@@ -26,9 +26,15 @@ vi.mock('@/integrations/supabase/client', () => ({
   },
 }));
 
-const toastMock = vi.fn();
-vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({ toast: toastMock }),
+const toastSuccessMock = vi.fn();
+const toastErrorMock = vi.fn();
+vi.mock('sonner', () => ({
+  toast: {
+    success: (...args: unknown[]) => toastSuccessMock(...args),
+    error: (...args: unknown[]) => toastErrorMock(...args),
+    info: vi.fn(),
+    warning: vi.fn(),
+  },
 }));
 
 /* ------------------------------------------------------------------ */
@@ -164,9 +170,7 @@ describe('useCreatePatient (unit)', () => {
       }),
     }));
 
-    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Patient créé',
-    }));
+    expect(toastSuccessMock).toHaveBeenCalledWith('Patient créé', expect.any(Object));
   });
 
   it('shows error toast on failure', async () => {
@@ -187,10 +191,7 @@ describe('useCreatePatient (unit)', () => {
     ).rejects.toThrow();
 
     await waitFor(() => {
-      expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({
-        title: 'Erreur',
-        variant: 'destructive',
-      }));
+      expect(toastErrorMock).toHaveBeenCalledWith('Erreur', expect.any(Object));
     });
   });
 });
@@ -221,9 +222,7 @@ describe('useCreatePractitioner (unit)', () => {
       }),
     }));
 
-    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Praticien créé',
-    }));
+    expect(toastSuccessMock).toHaveBeenCalledWith('Praticien créé', expect.any(Object));
   });
 });
 
@@ -247,9 +246,7 @@ describe('useAssignPatient (unit)', () => {
 
     expect(fromMock).toHaveBeenCalledWith('practitioner_patients');
     expect(insertChain.insert).toHaveBeenCalled();
-    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Assignation créée',
-    }));
+    expect(toastSuccessMock).toHaveBeenCalledWith('Assignation créée', expect.any(Object));
   });
 
   it('shows friendly message on duplicate assignment', async () => {
@@ -269,9 +266,7 @@ describe('useAssignPatient (unit)', () => {
     ).rejects.toThrow();
 
     await waitFor(() => {
-      expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({
-        title: 'Erreur',
-      }));
+      expect(toastErrorMock).toHaveBeenCalledWith('Erreur', expect.any(Object));
     });
   });
 });
@@ -293,9 +288,7 @@ describe('useRemoveAssignment (unit)', () => {
 
     expect(fromMock).toHaveBeenCalledWith('practitioner_patients');
     expect(deleteChain.delete).toHaveBeenCalled();
-    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Assignation supprimée',
-    }));
+    expect(toastSuccessMock).toHaveBeenCalledWith('Assignation supprimée', expect.any(Object));
   });
 });
 
@@ -322,9 +315,7 @@ describe('useUpdatePatient (unit)', () => {
     // Should call from('profiles') and from('patients')
     expect(fromMock).toHaveBeenCalledWith('profiles');
     expect(fromMock).toHaveBeenCalledWith('patients');
-    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Patient modifié',
-    }));
+    expect(toastSuccessMock).toHaveBeenCalledWith('Patient modifié', expect.any(Object));
   });
 });
 
@@ -348,9 +339,7 @@ describe('useDeletePatient (unit)', () => {
     expect(invokeMock).toHaveBeenCalledWith('delete-user', expect.objectContaining({
       body: { user_id: 'user-uuid-1' },
     }));
-    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Patient supprimé',
-    }));
+    expect(toastSuccessMock).toHaveBeenCalledWith('Patient supprimé', expect.any(Object));
   });
 });
 
@@ -376,9 +365,7 @@ describe('useUpdatePractitioner (unit)', () => {
 
     expect(fromMock).toHaveBeenCalledWith('profiles');
     expect(fromMock).toHaveBeenCalledWith('practitioners');
-    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Praticien modifié',
-    }));
+    expect(toastSuccessMock).toHaveBeenCalledWith('Praticien modifié', expect.any(Object));
   });
 });
 
@@ -402,8 +389,6 @@ describe('useDeletePractitioner (unit)', () => {
     expect(invokeMock).toHaveBeenCalledWith('delete-user', expect.objectContaining({
       body: { user_id: 'user-uuid-1' },
     }));
-    expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Praticien supprimé',
-    }));
+    expect(toastSuccessMock).toHaveBeenCalledWith('Praticien supprimé', expect.any(Object));
   });
 });

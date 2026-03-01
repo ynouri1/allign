@@ -76,6 +76,7 @@ export function useAlignerAnalysis() {
         gingivalHealth: data.gingivalHealth,
         overallScore: data.overallScore,
         recommendations: data.recommendations,
+        attachmentDetails: data.attachmentDetails || undefined,
         analyzedAt: new Date(data.analyzedAt),
       };
 

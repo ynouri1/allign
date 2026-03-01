@@ -61,6 +61,7 @@ export default function PractitionerDashboard() {
         userType="practitioner" 
         userName={profile?.full_name || "Dr. Martin"}
         alertCount={unresolvedAlerts.length}
+        alerts={alerts}
       />
       
       <main className="container py-6 px-4 space-y-6 animate-fade-in">

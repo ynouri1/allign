@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePractitionerPatients, usePractitionerProfile } from '@/hooks/usePractitionerData';
@@ -15,8 +15,10 @@ import { differenceInDays, addDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { PatientPhotosView } from '@/components/practitioner/PatientPhotosView';
 import { AlertsPanelNew } from '@/components/practitioner/AlertsPanelNew';
-import { TeethViewer3D } from '@/components/practitioner/TeethViewer3D';
 import { PatientTreatmentInfo } from '@/components/practitioner/PatientTreatmentInfo';
+
+// Lazy load Three.js viewer (~1MB) — only loaded when practitioner opens patient details
+const TeethViewer3D = React.lazy(() => import('@/components/practitioner/TeethViewer3D').then(m => ({ default: m.TeethViewer3D })));
 
 const NewPractitionerDashboard = () => {
   const navigate = useNavigate();
@@ -304,7 +306,9 @@ const NewPractitionerDashboard = () => {
                       {/* Teeth with Attachments */}
                       <div>
                         <h3 className="font-semibold mb-3">Taquets (attachements)</h3>
-                        <TeethViewer3D attachmentTeeth={selectedPatient.attachment_teeth || []} />
+                        <Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
+                          <TeethViewer3D attachmentTeeth={selectedPatient.attachment_teeth || []} />
+                        </Suspense>
                       </div>
                     </TabsContent>
 

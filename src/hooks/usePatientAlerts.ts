@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,18 +17,45 @@ export interface PatientAlert {
 export function usePatientAlerts() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [patientId, setPatientId] = useState<string | null>(null);
 
-  // Realtime: auto-refresh when alerts change in DB
+  // Resolve patient_id from auth user (once)
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setPatientId(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      if (cancelled || !profile) return;
+      const { data: patient } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('profile_id', profile.id)
+        .single();
+      if (!cancelled && patient) setPatientId(patient.id);
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // Realtime: only listen to changes for THIS patient
+  useEffect(() => {
+    if (!patientId) return;
 
     const channel = supabase
       .channel('patient-alerts-realtime')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'practitioner_alerts' },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'practitioner_alerts',
+          filter: `patient_id=eq.${patientId}`,
+        },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['patient-alerts', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['patient-alerts', user?.id] });
         }
       )
       .subscribe();
@@ -36,7 +63,7 @@ export function usePatientAlerts() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, queryClient]);
+  }, [patientId, user?.id, queryClient]);
 
   return useQuery({
     queryKey: ['patient-alerts', user?.id],
