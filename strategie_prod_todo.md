@@ -78,14 +78,16 @@
   - CSP, HSTS, X-Frame-Options
   - Configuration vercel.json
 
-- [ ] **Pipeline CI/CD**
-  - GitHub Actions : lint + test + build + deploy
-  - Deploy auto sur push main
-  - Branche staging optionnelle
+- [x] **Pipeline CI/CD** ✅
+  - GitHub Actions : lint + test + build + deploy ✅
+  - Deploy auto sur push main ✅
+  - Branche staging optionnelle ✅
+  - Workflows Vercel et Netlify créés ✅
 
-- [ ] **Split vendor chunks**
-  - `manualChunks` dans vite.config.ts
-  - Objectif : chunks < 300 KB
+- [x] **Split vendor chunks** ✅
+  - `manualChunks` dans vite.config.ts ✅
+  - Objectif : chunks < 300 KB ✅
+  - Chunks organisés: React, UI, Supabase, 3D, Charts, Utils, Mobile ✅
 
 - [ ] **DNS email**
   - Resend + domaine vérifié
