@@ -83,69 +83,17 @@ jobs:
           path: dist/
           retention-days: 30
 
-  # Job 3: Deploy sur Vercel (branche main seulement)
-  deploy-production:
-    name: 🚀 Deploy to Production
+  # Job 3: Validation finale et notification
+  validation-success:
+    name: ✅ Validation Success
     runs-on: ubuntu-latest
     needs: [lint-and-test, build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: production
-    
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 📥 Download build artifacts  
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: dist/
-
-      - name: 🚀 Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-          working-directory: ./
-
-  # Job 4: Deploy staging (branche develop)
-  deploy-staging:
-    name: 🧪 Deploy to Staging  
-    runs-on: ubuntu-latest
-    needs: [lint-and-test, build]
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
-    environment: staging
-    
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 📥 Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: dist/
-
-      - name: 🧪 Deploy to Vercel (Preview)
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./
-
-  # Job 5: Notification de succès
-  notify-success:
-    name: ✅ Notify Success
-    runs-on: ubuntu-latest
-    needs: [deploy-production]
     if: success()
     
     steps:
-      - name: ✅ Success notification
+      - name: ✅ Validation completed
         run: |
-          echo "🎉 Deployment successful!"
-          echo "✅ All jobs completed successfully"
-          echo "🚀 Application deployed to production"
+          echo "🎉 CI/CD validation successful!"
+          echo "✅ Lint, tests, and build completed successfully"
+          echo "🚀 Vercel will automatically deploy from main branch"
+          echo "📱 Production URL: https://allign.space"
