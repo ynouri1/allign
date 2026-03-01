@@ -5,6 +5,21 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// Debug temporaire - Version 1.1 
+console.log('🔍 Environment check:', {
+  url: SUPABASE_URL,
+  key: SUPABASE_PUBLISHABLE_KEY ? 'PRESENT' : 'MISSING',
+  env: import.meta.env.MODE,
+  all_env: import.meta.env
+});
+
+if (!SUPABASE_URL) {
+  throw new Error(`❌ VITE_SUPABASE_URL is missing! Mode: ${import.meta.env.MODE}`);
+}
+if (!SUPABASE_PUBLISHABLE_KEY) {  
+  throw new Error(`❌ VITE_SUPABASE_PUBLISHABLE_KEY is missing! Mode: ${import.meta.env.MODE}`);
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 

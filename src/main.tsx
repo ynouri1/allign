@@ -22,4 +22,7 @@ import("@/lib/photoSyncService").then(({ startPhotoSyncService }) => {
   startPhotoSyncService().catch((e) => console.warn("[PhotoSync] init error:", e));
 });
 
+// Production v1.1 - Debug deployment 
+console.log('🚀 AlignerTracker v1.1 starting...');
+
 createRoot(document.getElementById("root")!).render(<App />);
