@@ -2,22 +2,28 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const IS_TEST_MODE = import.meta.env.MODE === 'test';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || (IS_TEST_MODE ? 'http://localhost:54321' : '');
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || (IS_TEST_MODE ? 'test-key' : '');
 
-// Debug temporaire - Version 1.1 
-console.log('🔍 Environment check:', {
-  url: SUPABASE_URL,
-  key: SUPABASE_PUBLISHABLE_KEY ? 'PRESENT' : 'MISSING',
-  env: import.meta.env.MODE,
-  all_env: import.meta.env
-});
-
-if (!SUPABASE_URL) {
-  throw new Error(`❌ VITE_SUPABASE_URL is missing! Mode: ${import.meta.env.MODE}`);
+// Debug temporaire - Version 1.1 (skip en test)
+if (!IS_TEST_MODE) {
+  console.log('🔍 Environment check:', {
+    url: SUPABASE_URL,
+    key: SUPABASE_PUBLISHABLE_KEY ? 'PRESENT' : 'MISSING',
+    env: import.meta.env.MODE,
+    all_env: import.meta.env
+  });
 }
-if (!SUPABASE_PUBLISHABLE_KEY) {  
-  throw new Error(`❌ VITE_SUPABASE_PUBLISHABLE_KEY is missing! Mode: ${import.meta.env.MODE}`);
+
+// Validation stricte sauf en mode test
+if (!IS_TEST_MODE) {
+  if (!SUPABASE_URL) {
+    throw new Error(`❌ VITE_SUPABASE_URL is missing! Mode: ${import.meta.env.MODE}`);
+  }
+  if (!SUPABASE_PUBLISHABLE_KEY) {  
+    throw new Error(`❌ VITE_SUPABASE_PUBLISHABLE_KEY is missing! Mode: ${import.meta.env.MODE}`);
+  }
 }
 
 // Import the supabase client like this:
