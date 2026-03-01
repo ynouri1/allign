@@ -22,7 +22,9 @@ import("@/lib/photoSyncService").then(({ startPhotoSyncService }) => {
   startPhotoSyncService().catch((e) => console.warn("[PhotoSync] init error:", e));
 });
 
-// Production v1.1 - Debug deployment 
-console.log('🚀 AlignerTracker v1.1 starting...');
+// Production v1.1.2 - Force rebuild deployment
+const BUILD_TIMESTAMP = '2026-03-01T17:35:00Z';
+console.log(`🚀 AlignerTracker v1.1.2 starting... Build: ${BUILD_TIMESTAMP}`);
+console.log('🔧 Force cache invalidation - new deployment');
 
 createRoot(document.getElementById("root")!).render(<App />);
