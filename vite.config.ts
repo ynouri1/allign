@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 
+// Force rebuild timestamp: 2026-03-01T18:15:00Z
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
   server: {
