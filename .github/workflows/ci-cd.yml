@@ -95,5 +95,6 @@ jobs:
         run: |
           echo "🎉 CI/CD validation successful!"
           echo "✅ Lint, tests, and build completed successfully"
-          echo "🚀 Vercel will automatically deploy from main branch"
+          echo "🚀 Ready for manual Vercel deployment"
           echo "📱 Production URL: https://allign.space"
+          echo "📋 Manual deploy: https://vercel.com/dashboard"
